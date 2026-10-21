@@ -93,6 +93,15 @@ h1 small{font-family:system-ui,sans-serif;font-size:.7rem;font-weight:400;color:
 .days b,.days span{display:block}
 .days .tag{font-weight:700}.days .g{color:var(--good)}.days .o{color:var(--ok)}.days .r{color:var(--bad)}
 .days small{display:block;color:var(--mute);font-size:.8rem;margin-top:2px}
+button:disabled{opacity:.5;cursor:default}
+.ctl{margin:0 0 12px}.ctl .wl{margin:8px 0 4px}
+.daychips{position:relative;display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px}
+.daychips button{flex:none;min-width:68px;padding:4px 8px;line-height:1.25;font-size:.85rem}
+.daychips button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.days .tag.r{font-weight:600}
+.days .calm{color:var(--mute);font-weight:600}
+.days .wk p{margin:6px 0 0;font-size:.9rem;color:var(--ink)}
+.days button.link{min-height:40px;padding:8px 2px 0;font-size:.85rem}
 </style>
 </head>
 <body>
@@ -233,6 +242,7 @@ if (location.search.includes('test')) Engine.selfTest();
 
 /* ========= Data layer ========= */
 const get = async u => { const r = await fetch(u); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); };
+const dayName = (date, long) => new Date(date + 'T12:00:00Z').toLocaleDateString(undefined, long ? {weekday:'short', day:'numeric', month:'short', timeZone:'UTC'} : {weekday:'short', day:'numeric', timeZone:'UTC'});
 async function loadForecast(lat, lon){
   const m = get(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=wave_height,wave_period,wave_direction,sea_surface_temperature&cell_selection=sea&timezone=auto&forecast_days=7`).catch(() => null);   // null = no wave data at this point
   const w = get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=wind_speed_10m,wind_direction_10m&daily=sunrise,sunset&wind_speed_unit=mph&timezone=auto&forecast_days=7`);
@@ -250,18 +260,18 @@ async function loadForecast(lat, lon){
         windMph:wx.hourly.wind_speed_10m[j], windFrom:wx.hourly.wind_direction_10m[j],
         daylight: t >= rise.slice(0,13)+':00' && t <= set, past: t.slice(0,13) < now.slice(0,13)});
     });
-    return {rows, rise, set, label: k ? 'tomorrow' : 'today'};
+    return {rows, rise, set, date, label: k===0 ? 'today' : k===1 ? 'tomorrow' : 'on ' + dayName(date, true)};
   };
   const days = wx.daily.time.map((_, k) => build(k)), d0 = days[0];
-  const main = d0.rows.some(r => r.daylight && !r.past) || !days[1] ? d0 : days[1];   // daylight over? the main card shows tomorrow
-  return {...main, days};   // days: all 7, for the week card
+  const defK = d0.rows.some(r => r.daylight && !r.past) || !days[1] ? 0 : 1;   // daylight over? start on tomorrow
+  return {...days[defK], days, defK, k:defK};   // days: all 7, for the week card and the day picker
 }
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.9 · 21 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.10 · 21 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
-let level = 1, place = null, data = null;
+let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
 
 function drawLevels(){
@@ -285,31 +295,48 @@ const hr = h => { h %= 24; const x = h%12||12; return x + (h<12?'am':'pm'); };  
 const term = (t, def) => `<abbr title="${def}" tabindex="0">${t}</abbr>`;
 
 const trustTxt = {high:'', medium:'Fairly reliable', low:'Less certain, check again closer to the day'};
+let wk = null;   // this week's per-day results, reused when the better/avoid advice is filled in
 function weekHTML(){
   if (!data.days || data.days.length < 2) return '';
   const res = data.days.map(d => Engine.dayBest(d.rows, level, inWhen));
   const adj = res.map(r => !r ? -1 : r.row.h > CONFIG.levels[level-1].maxH ? Math.min(r.avg, CONFIG.goodAt - 1) : r.avg);   // too big for your level: never better than marginal
   const topK = adj.indexOf(Math.max(...adj));   // first best day only
+  wk = {res, adj};
   const lis = data.days.map((d,k) => {
-    const r = res[k], iso = (d.rise || '').slice(0,10);
-    const nm = iso ? new Date(iso + 'T12:00:00Z').toLocaleDateString(undefined, {weekday:'short', day:'numeric', month:'short', timeZone:'UTC'}) : 'Day ' + (k+1);
+    const r = res[k], nm = d.date ? dayName(d.date, true) : 'Day ' + (k+1);
     const lead = k === 0 ? 'Today, ' : k === 1 ? 'Tomorrow, ' : '';
     const trust = trustTxt[CONFIG.trust[Math.min(k, CONFIG.trust.length-1)]];
+    const canShow = d.rows.some(x => x.daylight && !x.past && x.h != null);
+    const show = !canShow ? '' : k === data.k ? '<small>Showing this day above</small>' : `<button type="button" class="link" data-d="${k}">Show this day</button>`;
     if (!d.rows.some(x => x.h != null)) return `<li><b>${lead}${nm}</b><small>No wave data for this day.</small></li>`;
-    if (!r) return `<li><b>${lead}${nm}</b><span class="tag r">✕ ${k===0 && d.rows.every(x => x.past || !x.daylight) ? 'Daylight is over' : 'No suitable window'}</span>${trust ? `<small>${trust}</small>` : ''}</li>`;
-    const b = Engine.band(Math.round(adj[k])), x = r.row;
-    const tag = {g:'✓ Good for level '+level, o:'~ Marginal', r:'✕ Not recommended'}[b];
-    const star = k === topK && b !== 'r' ? ' ★ Best day' : '';
+    if (!r) return `<li><b>${lead}${nm}</b><span class="tag calm">○ ${k===0 && d.rows.every(x => x.past || !x.daylight) ? 'Daylight is over' : 'No suitable window'}</span>${trust ? `<small>${trust}</small>` : ''}${show}</li>`;
+    const band = Engine.band(Math.round(adj[k])), x = r.row;
+    const tag = {g:'✓ Good for level '+level, o:'~ Marginal', r:'○ Not recommended here'}[band];
+    const star = k === topK && band !== 'r' ? ' ★ Best day' : '';
     const big = x.h > CONFIG.levels[level-1].maxH ? ' · ⚠ Bigger than level '+level+' should handle' : '';
-    return `<li><b>${lead}${nm}${star}</b><span class="tag ${b}">${tag}</span><span>Best ${hr(r.from.hour)} to ${hr(r.to.hour+1)}</span>
-      <small>${Engine.bodyHeight(x.h)} (${fmtH(x.h)}) · ${x.period != null ? Math.round(x.period)+'s · ' : ''}${windTxt[r.type]}${big}${trust ? ' · '+trust : ''}</small></li>`;
+    return `<li><b>${lead}${nm}${star}</b><span class="tag ${band}">${tag}</span><span>Best ${hr(r.from.hour)} to ${hr(r.to.hour+1)}</span>
+      <small>${Engine.bodyHeight(x.h)} (${fmtH(x.h)}) · ${x.period != null ? Math.round(x.period)+'s · ' : ''}${windTxt[r.type]}${big}${trust ? ' · '+trust : ''}</small>
+      ${band === 'g' ? '' : `<div class="wk" data-k="${k}"></div>`}${show}</li>`;
   }).join('');
   return `<section class="card"><h3>Next 7 days (level ${level}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()})</h3>
     <ul class="days">${lis}</ul>
     <p class="legend">Best two-hour daylight window each day, scored for your level at the forecast point above. Forecasts get less certain the further ahead they look.</p></section>`;
 }
+/* On days that aren't green, say which coast is better and which to avoid (needs the beaches, so it fills in when they arrive) */
+function fillWeek(pool){
+  if (!wk || !data || !data.days) return;
+  data.days.forEach((d,k) => {
+    const el = document.querySelector(`.wk[data-k="${k}"]`); if (!el) return;
+    if (!pool.length){ el.innerHTML = ''; return; }
+    const {better, avoid} = coastInfo(pool.map(s => ({s, r:scoreSpot(s, level, d.rows)})));
+    const go = better && better.ok.slice(0,2).map(x => `${esc(x.s.name)} (${roughFt(x.r.h)}, ${x.s.min} min drive)`).join(', ');
+    el.innerHTML = better ? `<p><b>Better:</b> the ${better.name}. Try ${go}.</p>` + (avoid.length ? `<p><b>Avoid:</b> the ${avoid.map(i => i.name).join(' and the ')}.</p>` : '')
+      : `<p>Nowhere within your travel distance suits level ${level} that day, so it’s best to skip it or try another day.</p>`;
+  });
+}
 
 function render(){
+  if (data.days){ const k = dayK ?? data.defK; Object.assign(data, data.days[k], {k}); }   // load the chosen day into data
   const {rows} = data;
   const usable = rows.filter(r => !r.past && r.h != null);
   if (!usable.length) { $('out').innerHTML = `<div class="err">No marine data for this spot. Try a beach or coastal town.</div>`; return; }
@@ -321,7 +348,7 @@ function render(){
   const i = mine.b.i, win = i>=0 ? rows.slice(i, i+2) : [];
   const mAvg = Math.round(mine.b.avg);
   const myBand = Engine.band(mAvg);
-  const forYou = i<0 ? (when === 'any' ? 'No safe window left '+data.label+'.' : 'Nothing suitable in that part of the day.') :
+  const forYou = i<0 ? (when === 'any' ? (data.k ? 'No suitable window '+data.label+'.' : 'No safe window left today.') : 'Nothing suitable in that part of the day.') :
     myBand==='g' ? `For your level: go. Best window ${hr(win[0].hour)} to ${hr(win[1].hour+1)}.` :
     myBand==='o' ? `For your level: marginal. If you go, aim for ${hr(win[0].hour)} to ${hr(win[1].hour+1)} and stay close to shore.` :
     'Conditions here don’t suit your level today.';
@@ -358,7 +385,7 @@ function render(){
     <div class="tl" role="img" aria-label="Hourly suitability today. Outlined bars mark the best two-hour window.">${bars}</div>
     <div class="ticks" aria-hidden="true">${ticks}</div>
     <p class="legend">✓ good &nbsp; ~ marginal &nbsp; ✕ not recommended &nbsp; Outlined = best window</p></section>
-  <section class="card"><h3>Conditions ${data.label==='today'?'now':'tomorrow'}</h3><dl>
+  <section class="card"><h3>Conditions ${data.k ? data.label : 'now'}</h3><dl>
     <dt>Wave size</dt><dd>${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)})</dd>
     <dt>${term('Period','Seconds between wave crests. Beginners like 6 to 10.')}</dt><dd>${Math.round(ref.period)} seconds</dd>
     <dt>Wind</dt><dd>${Math.round(ref.windMph)} mph, ${s0.type}</dd>
@@ -472,7 +499,7 @@ $('geo').addEventListener('click', () => {
 /* ========= Run: forecast and beaches load side by side ========= */
 async function run(lat, lon, name){
   const id = ++runId; spotRun++; showN = 10;
-  place = name; center = {lat, lon}; data = null; spotsData = null; spotsMsg = ''; fcFrom = null;
+  place = name; center = {lat, lon}; data = null; dayK = null; spotsData = null; spotsMsg = ''; fcFrom = null;
   $('out').innerHTML = '<div class="skel" aria-label="Loading"></div>';
   $('spots').hidden = false; drawSpots();
   const fcP = loadForecast(lat, lon).then(d => ({d}), e => ({e}));
@@ -581,28 +608,49 @@ async function addDrive(lat, lon, list){   // real road times from OSRM; falls b
   list.forEach(s => { if (!(s.min >= 0)){ s.min = Math.round(s.km*1.4/50*60); s.est = true; } });
 }
 
-function scoreSpot(s, L){
+function scoreSpot(s, L, rows = data.rows){
   const f = s.facing, ex = r => f == null ? 1 : Engine.exposure(r.waveFrom, f);   // no angle: full swell, wind judged against the swell
-  const sc = data.rows.map(r => (r.past || r.h == null) ? null :
+  const sc = rows.map(r => (r.past || r.h == null) ? null :
     Engine.score({...r, h: r.h * ex(r), waveFrom: f ?? r.waveFrom}, L));
-  const b = Engine.bestWindow(sc.map((x,k) => x && !x.night && inWhen(data.rows[k]) ? x.total : null));   // daylight hours in the chosen part of the day
+  const b = Engine.bestWindow(sc.map((x,k) => x && !x.night && inWhen(rows[k]) ? x.total : null));   // daylight hours in the chosen part of the day
   if (b.i < 0) return {total:0, none:true};
-  const r = data.rows[b.i], e = ex(r);
-  return {total:Math.round(b.avg), win:[r, data.rows[b.i+1]], h:r.h*e, period:r.period, e, type:sc[b.i].type, wind:r.windMph};
+  const r = rows[b.i], e = ex(r);
+  return {total:Math.round(b.avg), win:[r, rows[b.i+1]], h:r.h*e, period:r.period, e, type:sc[b.i].type, wind:r.windMph};
 }
 
 /* ===== Time of day ===== */
 let when = 'any';
 try { const w = localStorage.getItem('sb-when'); if (w && CONFIG.times[w]) when = w; } catch(e){}
 const inWhen = r => r.hour >= CONFIG.times[when][1] && r.hour < CONFIG.times[when][2];
-function drawWhens(){
-  $('when').innerHTML = Object.entries(CONFIG.times).map(([k,v]) => `<button type="button" aria-pressed="${k===when}" data-w="${k}">${v[0]}</button>`).join('');
+const whensHTML = () => Object.entries(CONFIG.times).map(([k,v]) => `<button type="button" aria-pressed="${k===when}" data-w="${k}">${v[0]}</button>`).join('');
+function drawWhens(){ $('when').innerHTML = whensHTML(); }
+function keepPlace(id, fn){   // redraw without the page jumping under the person's finger
+  const el = $(id), y = el ? el.getBoundingClientRect().top : 0;
+  fn();
+  if (el) window.scrollBy(0, el.getBoundingClientRect().top - y);
 }
-$('when').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  when = b.dataset.w; try { localStorage.setItem('sb-when', when); } catch(e){}
-  drawWhens(); if (data) render();
+function setWhen(w, anchor){
+  when = w; try { localStorage.setItem('sb-when', when); } catch(e){}
+  drawWhens(); keepPlace(anchor, () => { if (data) render(); });
+}
+function setDay(k, anchor){
+  dayK = k; keepPlace(anchor, () => { if (data) render(); });
+  if (anchor === 'out') $('out').scrollIntoView({block:'start'});
+}
+$('when').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setWhen(b.dataset.w, 'out'); });
+$('spots').addEventListener('click', e => {   // day and time pickers inside the beaches card
+  const b = e.target.closest('button'); if (!b || b.disabled || !b.closest('.ctl')) return;
+  if (b.dataset.d != null) setDay(+b.dataset.d, 'spots'); else if (b.dataset.w) setWhen(b.dataset.w, 'spots');
 });
+$('out').addEventListener('click', e => {   // "Show this day" in the week card
+  const b = e.target.closest('button[data-d]'); if (b) setDay(+b.dataset.d, 'out');
+});
+function ctlHTML(){
+  if (!data || !data.days) return '';
+  const chips = data.days.map((d,k) => `<button type="button" data-d="${k}" aria-pressed="${k===data.k}"${d.rows.some(r => r.daylight && !r.past && r.h != null) ? '' : ' disabled'}>${k===0 ? 'Today' : dayName(d.date)}</button>`).join('');
+  return `<div class="ctl"><p class="wl">Day</p><div class="daychips" id="chips" role="group" aria-label="Day for the beach forecast">${chips}</div>
+    <p class="wl">Time of day</p><div class="whens" role="group" aria-label="Time of day for the beach forecast">${whensHTML()}</div></div>`;
+}
 
 /* ===== How far are you willing to travel? (miles, km or minutes of driving) ===== */
 let reach = {n:25, unit:'mi'}, showN = 10, spotRun = 0;
@@ -614,6 +662,8 @@ const dist = km => reach.unit === 'mi' ? (km/1.609).toFixed(0) + ' mi' : km.toFi
 const roughFt = h => '~' + String(Math.round(h/0.3048*2)/2) + ' ft';
 const reachHTML = () => `<div class="reach"><label for="rn">Travel up to</label><input id="rn" type="number" inputmode="numeric" min="1" max="200" value="${reach.n}"><select id="ru" aria-label="Distance unit">${Object.entries(unitLbl).map(([k,v]) => `<option value="${k}"${k===reach.unit?' selected':''}>${v}</option>`).join('')}</select></div>`;
 function bindReach(){
+  const ch = $('chips'), on = ch && ch.querySelector('[aria-pressed=true]'); if (on) ch.scrollLeft = on.offsetLeft - (ch.clientWidth - on.offsetWidth)/2;   // keep the chosen day in view
+
   const apply = () => { const n = Math.round(+$('rn').value); if (!(n > 0)) return;
     reach = {n:Math.min(n,200), unit:$('ru').value};
     try { localStorage.setItem('sb-reach', JSON.stringify(reach)); } catch(e){}
@@ -639,9 +689,7 @@ async function reloadSpots(){
 const COMPASS = ['north','north-east','east','south-east','south','south-west','west','north-west'];
 const coastOf = s => COMPASS[Math.round((s.facing != null ? s.facing : bearing(center.lat, center.lon, s.lat, s.lon)) / 45) % 8] + ' coast';
 const windTxt = {offshore:'clean offshore wind', onshore:'choppy onshore wind', cross:'sideways wind'};
-function adviseCoasts(all){
-  const box = $('advice'), t = $('vtitle'); if (!box || !t) return;   // only exists on a red verdict card
-  if (!all.length){ box.innerHTML = ''; t.textContent = '✕ Not great here'; return; }
+function coastInfo(all){   // which coast is better, which to avoid
   const g = {};
   all.forEach(x => { const c = coastOf(x.s); (g[c] = g[c] || []).push(x); });
   const info = Object.entries(g).map(([name, a]) => {
@@ -654,8 +702,14 @@ function adviseCoasts(all){
   });
   const better = info.filter(i => i.ok.length).sort((p,q) => q.score - p.score)[0];
   const avoid = info.filter(i => i !== better && !i.ok.length);
+  return {better, avoid};
+}
+function adviseCoasts(all){
+  const box = $('advice'), t = $('vtitle'); if (!box || !t) return;   // only exists on a red verdict card
+  if (!all.length){ box.innerHTML = ''; t.textContent = '✕ Not great here'; return; }
+  const {better, avoid} = coastInfo(all);
   const go = better && better.ok.slice(0,3).map(x => `${esc(x.s.name)} (${roughFt(x.r.h)} · ${Math.round(x.r.period)}s · ${x.s.min} min drive)`).join(', ');
-  box.innerHTML = (better ? `<p class="adv"><b>Better:</b> the ${better.name}. Try ${go}.</p>` : '<p class="adv">Nowhere within your travel distance suits your level today. Try another day, a bigger distance or a different time of day.</p>')
+  box.innerHTML = (better ? `<p class="adv"><b>Better:</b> the ${better.name}. Try ${go}.</p>` : '<p class="adv">Nowhere within your travel distance suits your level '+data.label+'. Try another day, a bigger distance or a different time of day.</p>')
     + (avoid.length ? `<p class="adv"><b>Avoid:</b> ${avoid.map(i => `the ${i.name}${i.h != null ? ' ('+roughFt(i.h)+(i.wind ? ', '+windTxt[i.wind[0]] : '')+')' : ''}`).join('; ')}.</p>` : '');
   t.textContent = better ? '→ Better on the ' + better.name : '→ No good coast nearby today';
 }
@@ -663,7 +717,7 @@ function adviseCoasts(all){
 function drawSpots(){
   const box = $('spots'); if (!box) return;
   if (map){ map.remove(); map = null; }
-  const head = reachHTML();
+  const head = reachHTML() + ctlHTML();
   if (!spotsData || !data){
     box.innerHTML = head + (spotsMsg || '<h3>Finding beaches nearby…</h3><p class="legend">Asking the free map servers. This can take up to 30 seconds.</p><div class="skel"></div>');
     if (spotsMsg && $('advice')) $('advice').innerHTML = '';
@@ -671,6 +725,7 @@ function drawSpots(){
     return;
   }
   const pool = spotsData.filter(inReach);
+  fillWeek(pool);
   if (!pool.length){ adviseCoasts([]); box.innerHTML = head + `<h3>Nearby beaches</h3><p>No surf beaches found within ${reach.n} ${unitLbl[reach.unit]}. Try a bigger distance, or a coastal town.</p>`; bindReach(); return; }
   const here = bestFor(level).b.avg;
   const all = pool.map(s => ({s, r:scoreSpot(s, level)}))
@@ -678,13 +733,13 @@ function drawSpots(){
   adviseCoasts(all);
   const ranked = all.slice(0, showN);
   const goodOnes = ranked.filter(x => x.r.total >= CONFIG.okAt).length;
-  const title = here >= CONFIG.goodAt ? 'Other beaches nearby' : 'Where to surf instead';
+  const title = here >= CONFIG.goodAt ? 'Other beaches nearby' : 'Better places nearby';
   const intro = here < CONFIG.okAt && goodOnes ? `Not great here for level ${level}, but these nearby beaches should be better:`
     : goodOnes ? `Nearby beaches, best first for level ${level}:`
-    : `Nothing nearby looks good for level ${level} today. These are the least bad. Consider another day, a bigger travel distance, or a lesson with a surf school.`;
+    : `Nothing nearby looks good for level ${level} ${data.label}. These are the least bad. Consider another day, a bigger travel distance, or a lesson with a surf school.`;
   const cards = ranked.map(({s,r},i) => {
     const b = Engine.band(r.total), tag = {g:'✓ Good for level '+level, o:'~ Marginal', r:'✕ Not recommended'}[b];
-    const shelter = r.none ? 'No suitable daylight window.' : s.facing == null ? 'Beach angle unclear, so ranked on size and wind only.' : r.e < 0.5 ? 'Sheltered from today’s swell, so smaller waves.' : r.e >= 0.9 ? 'Faces the swell head-on.' : 'Partly sheltered from the swell.';
+    const shelter = r.none ? 'No suitable daylight window.' : s.facing == null ? 'Beach angle unclear, so ranked on size and wind only.' : r.e < 0.5 ? 'Sheltered from the swell, so smaller waves.' : r.e >= 0.9 ? 'Faces the swell head-on.' : 'Partly sheltered from the swell.';
     const wind = r.none ? '' : r.type==='offshore' ? ' Offshore wind keeps it clean.' : r.type==='onshore' ? ' Onshore wind makes it choppy.' : ' Wind blows along the beach.';
     const big = !r.none && r.h > CONFIG.levels[level-1].maxH ? ' ⚠ Bigger than level '+level+' should handle.' : '';
     const cond = r.none ? '' : `<span class="ln">${roughFt(r.h)} waves (${Engine.bodyHeight(r.h)}) · ${Math.round(r.period)}s swell period</span>`;
@@ -693,7 +748,7 @@ function drawSpots(){
       <span class="ln">${when}about ${s.min} min drive${s.est?' (estimate)':''} · ${dist(s.km)}</span><small>${shelter}${wind}${big}</small></button>`;
   }).join('');
   const more = all.length > showN ? `<button type="button" class="spot" id="more">Show more beaches (${all.length-showN} more)</button>` : '';
-  box.innerHTML = head + `<h3>${title}</h3><p>${intro}</p><p class="legend">Showing ${ranked.length} of ${all.length} beaches within ${reach.n} ${unitLbl[reach.unit]}. The map shows all of them.</p><div id="map" role="region" aria-label="Map of nearby beaches"></div>${cards}${more}
+  box.innerHTML = head + `<h3>${title}</h3><p>${intro}</p><p class="legend">${data.k===0 ? 'Today' : data.k===1 ? 'Tomorrow' : dayName(data.date, true)}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()}. Showing ${ranked.length} of ${all.length} beaches within ${reach.n} ${unitLbl[reach.unit]}. The map shows all of them.</p><div id="map" role="region" aria-label="Map of nearby beaches"></div>${cards}${more}
     <p class="legend">Wave heights are rough estimates for each beach, worked out from its angle. Beach angles are estimated, so local knowledge matters. Ask a lifeguard or surf school.</p>`;
   bindReach(); const mb = $('more'); if (mb) mb.onclick = () => { showN += 10; drawSpots(); };
   if (typeof L === 'undefined'){ $('map').outerHTML = '<p class="legend">Map couldn’t load (check your connection).</p>'; return; }
