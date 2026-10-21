@@ -87,6 +87,7 @@ h1 small{font-family:system-ui,sans-serif;font-size:.7rem;font-weight:400;color:
 .whens button{padding:0 2px;font-size:.78rem}
 .whens button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .tl .off{opacity:.35}
+.adv{margin:10px 0 0;font-size:.95rem;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -238,7 +239,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.7 · 21 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.8 · 21 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null;
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -271,14 +272,14 @@ function render(){
   let cls, title;
   if (l1.b.avg >= CONFIG.goodAt){ cls='good'; title='Good for beginners'; }
   else if (l3.b.avg >= CONFIG.goodAt){ cls='ok'; title="Okay if you're level 3+"; }
-  else { cls='bad'; title='Not recommended'; }
+  else { cls='bad'; title='Not great here'; }
   const i = mine.b.i, win = i>=0 ? rows.slice(i, i+2) : [];
   const mAvg = Math.round(mine.b.avg);
   const myBand = Engine.band(mAvg);
   const forYou = i<0 ? (when === 'any' ? 'No safe window left '+data.label+'.' : 'Nothing suitable in that part of the day.') :
     myBand==='g' ? `For your level: go. Best window ${hr(win[0].hour)} to ${hr(win[1].hour+1)}.` :
     myBand==='o' ? `For your level: marginal. If you go, aim for ${hr(win[0].hour)} to ${hr(win[1].hour+1)} and stay close to shore.` :
-    'For your level: not recommended. A lesson with a surf school is the safe way to go.';
+    'Conditions here don’t suit your level today.';
   const ref = win[0] || usable[0], s0 = Engine.score({...ref, daylight:true}, level) || {type:'cross'};
   const reasons = [];
   reasons.push(`Waves are ${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)}). ${ref.h > CONFIG.levels[level-1].maxH ? 'That is bigger than level '+level+' should handle.' : ref.h < CONFIG.levels[level-1].idealMin ? 'Small, so expect a slow, mellow session.' : 'A comfortable size for level '+level+'.'}`);
@@ -302,10 +303,11 @@ function render(){
 
   $('out').innerHTML = `${fcFrom ? `<p class="legend">No wave data right at ${esc(place)}, so this uses the forecast at ${esc(fcFrom)}.</p>` : ''}
   <div class="verdict ${cls}" role="status">
-    <h2>${cls==='good'?'✓':cls==='ok'?'~':'✕'} ${title}</h2>
+    <h2 id="vtitle">${cls==='good'?'✓':cls==='ok'?'~':'✕'} ${title}</h2>
     <p class="for">${forYou}</p>
     <ul>${reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
     <p class="cond"><b>Conditions ${data.label}:</b> ${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)}) waves · ${Math.round(ref.period)}s period · ${Math.round(ref.windMph)} mph ${s0.type} wind${sst!=null ? ' · '+Math.round(sst)+'°C water' : ''}</p>
+    ${cls==='bad' ? '<div id="advice"><p class="adv">Checking which coast is better…</p></div>' : ''}
   </div>
   <section class="card"><h3>Best time ${data.label} (level ${level}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()})</h3>
     <div class="tl" role="img" aria-label="Hourly suitability today. Outlined bars mark the best two-hour window.">${bars}</div>
@@ -587,20 +589,47 @@ async function reloadSpots(){
   drawSpots();
 }
 
+/* ===== Which coast is better? Group the nearby beaches by the direction their coast faces ===== */
+const COMPASS = ['north','north-east','east','south-east','south','south-west','west','north-west'];
+const coastOf = s => COMPASS[Math.round((s.facing != null ? s.facing : bearing(center.lat, center.lon, s.lat, s.lon)) / 45) % 8] + ' coast';
+const windTxt = {offshore:'clean offshore wind', onshore:'choppy onshore wind', cross:'sideways wind'};
+function adviseCoasts(all){
+  const box = $('advice'), t = $('vtitle'); if (!box || !t) return;   // only exists on a red verdict card
+  if (!all.length){ box.innerHTML = ''; t.textContent = '✕ Not great here'; return; }
+  const g = {};
+  all.forEach(x => { const c = coastOf(x.s); (g[c] = g[c] || []).push(x); });
+  const info = Object.entries(g).map(([name, a]) => {
+    a.sort((p,q) => q.r.total - p.r.total);
+    const hs = a.filter(x => !x.r.none).map(x => x.r.h), w = {};
+    a.forEach(x => { if (x.r.type) w[x.r.type] = (w[x.r.type] || 0) + 1; });
+    const top = a.slice(0,3);
+    return {name, ok:a.filter(x => x.r.total >= CONFIG.okAt), h:hs.length ? hs.reduce((p,q) => p+q, 0)/hs.length : null,
+      wind:Object.entries(w).sort((p,q) => q[1]-p[1])[0], score:top.reduce((p,x) => p + x.r.total, 0)/top.length};
+  });
+  const better = info.filter(i => i.ok.length).sort((p,q) => q.score - p.score)[0];
+  const avoid = info.filter(i => i !== better && !i.ok.length);
+  const go = better && better.ok.slice(0,3).map(x => `${esc(x.s.name)} (${roughFt(x.r.h)} · ${Math.round(x.r.period)}s · ${x.s.min} min drive)`).join(', ');
+  box.innerHTML = (better ? `<p class="adv"><b>Better:</b> the ${better.name}. Try ${go}.</p>` : '<p class="adv">Nowhere within your travel distance suits your level today. Try another day, a bigger distance or a different time of day.</p>')
+    + (avoid.length ? `<p class="adv"><b>Avoid:</b> ${avoid.map(i => `the ${i.name}${i.h != null ? ' ('+roughFt(i.h)+(i.wind ? ', '+windTxt[i.wind[0]] : '')+')' : ''}`).join('; ')}.</p>` : '');
+  t.textContent = better ? '→ Better on the ' + better.name : '→ No good coast nearby today';
+}
+
 function drawSpots(){
   const box = $('spots'); if (!box) return;
   if (map){ map.remove(); map = null; }
   const head = reachHTML();
   if (!spotsData || !data){
     box.innerHTML = head + (spotsMsg || '<h3>Finding beaches nearby…</h3><p class="legend">Asking the free map servers. This can take up to 30 seconds.</p><div class="skel"></div>');
+    if (spotsMsg && $('advice')) $('advice').innerHTML = '';
     bindReach(); const rb = $('retry'); if (rb) rb.onclick = () => run(center.lat, center.lon, place);
     return;
   }
   const pool = spotsData.filter(inReach);
-  if (!pool.length){ box.innerHTML = head + `<h3>Nearby beaches</h3><p>No surf beaches found within ${reach.n} ${unitLbl[reach.unit]}. Try a bigger distance, or a coastal town.</p>`; bindReach(); return; }
+  if (!pool.length){ adviseCoasts([]); box.innerHTML = head + `<h3>Nearby beaches</h3><p>No surf beaches found within ${reach.n} ${unitLbl[reach.unit]}. Try a bigger distance, or a coastal town.</p>`; bindReach(); return; }
   const here = bestFor(level).b.avg;
   const all = pool.map(s => ({s, r:scoreSpot(s, level)}))
     .sort((a,b) => (b.r.total - b.s.min*CONFIG.drivePenaltyPerMin) - (a.r.total - a.s.min*CONFIG.drivePenaltyPerMin));
+  adviseCoasts(all);
   const ranked = all.slice(0, showN);
   const goodOnes = ranked.filter(x => x.r.total >= CONFIG.okAt).length;
   const title = here >= CONFIG.goodAt ? 'Other beaches nearby' : 'Where to surf instead';
