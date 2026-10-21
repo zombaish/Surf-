@@ -66,6 +66,15 @@ select{display:block;width:100%;font:inherit;min-height:48px;border-radius:12px;
 .res ul{padding-left:1.1em;margin:8px 0 14px}
 @keyframes s{to{background-position:-200% 0}}
 @media (prefers-reduced-motion:reduce){.skel{animation:none}}
+.sbox{position:relative;flex:1 1 220px}
+.sbox input{width:100%;min-width:0}
+.sugg{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:1000;list-style:none;margin:0;padding:4px;background:var(--card);border:2px solid var(--teal);border-radius:12px;box-shadow:0 8px 24px #0005;max-height:min(60vh,360px);overflow:auto}
+.sugg li{padding:8px 12px;min-height:48px;border-radius:8px;border-left:4px solid transparent;cursor:pointer}
+.sugg li[aria-selected=true],.sugg li:hover{background:var(--bg);border-left-color:var(--teal)}
+.sugg li b{display:block}.sugg li small{display:block;color:var(--mute);font-size:.8rem}
+.sugg .msg{cursor:default;color:var(--mute);border:0}.sugg .msg:hover{background:none}
+.where{margin:10px 0 0;font-size:.9rem;color:var(--mute)}.where b{color:var(--ink)}
+button.link{min-height:0;border:0;background:none;color:var(--teal);text-decoration:underline;padding:4px 2px;font-weight:600}
 </style>
 </head>
 <body>
@@ -74,11 +83,14 @@ select{display:block;width:100%;font:inherit;min-height:48px;border-radius:12px;
 <p class="sub">Is the surf right for you today? Plain-English answers from free marine forecast data.</p>
 
 <form class="row" id="f" role="search">
-  <input id="q" type="search" placeholder="Beach or town, e.g. Newquay" aria-label="Search for a beach or town" autocomplete="off">
+  <div class="sbox">
+    <input id="q" type="search" placeholder="Beach or town, e.g. Newquay" aria-label="Search for a beach or town" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="sugg" aria-autocomplete="list" enterkeyhint="search">
+    <ul class="sugg" id="sugg" role="listbox" aria-label="Matching places" hidden></ul>
+  </div>
   <button class="go" type="submit">Check surf</button>
   <button type="button" id="geo">Use my location</button>
 </form>
-<div id="places"></div>
+<p class="where" id="where" aria-live="polite"></p>
 
 <div class="levels" id="levels" role="group" aria-label="Your surf level"></div>
 <p class="lvname" id="lvname"></p>
@@ -86,8 +98,9 @@ select{display:block;width:100%;font:inherit;min-height:48px;border-radius:12px;
 <div id="quiz" aria-live="polite"></div>
 
 <div id="out" aria-live="polite"></div>
+<section class="card" id="spots" hidden></section>
 
-<p class="note">Forecasts are estimates. Wind direction is judged against the swell direction because exact beach angles aren't known yet. Always check with local lifeguards and signage before you paddle out.<br>Data: Open-Meteo (marine and weather), OpenStreetMap contributors (map and beaches, via Overpass), OSRM (drive times), Leaflet (map).</p>
+<p class="note">Forecasts are estimates. The main verdict judges wind against the swell direction; the nearby beaches use their own angles, estimated from the coastline. Always check with local lifeguards and signage before you paddle out.<br>Data: Open-Meteo (marine and weather), OpenStreetMap contributors (map and beaches, via Overpass), OSRM (drive times), Leaflet (map).</p>
 </main>
 
 <script>
@@ -107,7 +120,8 @@ const CONFIG = {
   periodLongPenaltyPerSec: [10, 8, 6, 4, 2], // per level, beyond ideal max
   goodAt: 62, okAt: 40,
   drivePenaltyPerMin: 0.25,    // spot ranking: each drive minute costs this many score points
-  exposure: {fullWithin: 45, shelteredFrom: 110, minShare: 0.15}  // swell angle vs beach facing
+  exposure: {fullWithin: 45, shelteredFrom: 110, minShare: 0.15},  // swell angle vs beach facing
+  spots: {radiusKm: 40, coastMatchM: 600, facingWalkM: 700, max: 24}  // beach search: radius, how close a beach must be to the sea coast, coast length used for its angle
 };
 const Engine = {
   angleDiff(a,b){ return Math.abs(((a-b+540)%360)-180); },
@@ -142,7 +156,7 @@ const Engine = {
     let total = parts.size*w.size + parts.wind*w.wind + parts.period*w.period;
     if (x.h > CONFIG.levels[L-1].maxH * 1.3) total = Math.min(total, 25);   // too big: cap hard
     if (!x.daylight) total = 0;
-    return {total:Math.round(total), type, parts};
+    return {total:Math.round(total), type, parts, night:!x.daylight};
   },
   band(t){ return t >= CONFIG.goodAt ? 'g' : t >= CONFIG.okAt ? 'o' : 'r'; },
   bestWindow(scores, len=2){   // scores: array of numbers (null = no data)
@@ -156,6 +170,7 @@ const Engine = {
     return best;
   },
   exposure(waveFrom, facing){   // share of swell height that reaches a beach facing `facing`
+    if (waveFrom == null) return 1;   // unknown swell direction: assume the bigger case
     const c = CONFIG.exposure, d = this.angleDiff(waveFrom, facing);
     if (d <= c.fullWithin) return 1;
     if (d >= c.shelteredFrom) return c.minShare;
@@ -174,6 +189,8 @@ const Engine = {
     a(this.sizeScore(0.4,1)===100,'size ideal');
     a(this.sizeScore(1.2,1)===0,'size too big for L1');
     a(this.score({h:0.4,period:8,windMph:5,windFrom:270,waveFrom:90,daylight:false},1).total===0,'night = 0');
+    a(this.bestWindow([null,50,60,null]).i===1,'window skips nulls');
+    a(this.exposure(90,90)===1 && this.exposure(270,90)===CONFIG.exposure.minShare,'exposure');
     console.log('Engine self-test done');
   }
 };
@@ -182,9 +199,10 @@ if (location.search.includes('test')) Engine.selfTest();
 /* ========= Data layer ========= */
 const get = async u => { const r = await fetch(u); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); };
 async function loadForecast(lat, lon){
-  const m = get(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=wave_height,wave_period,wave_direction,sea_surface_temperature&timezone=auto&forecast_days=2`);
+  const m = get(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=wave_height,wave_period,wave_direction,sea_surface_temperature&timezone=auto&forecast_days=2`).catch(() => null);   // null = no wave data at this point
   const w = get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=wind_speed_10m,wind_direction_10m&daily=sunrise,sunset&wind_speed_unit=mph&timezone=auto&forecast_days=2`);
   const [marine, wx] = await Promise.all([m, w]);
+  if (!marine || !marine.hourly) return null;
   const off = wx.utc_offset_seconds || 0;
   const now = new Date(Date.now() + off*1000).toISOString().slice(0,16);
   const build = k => {
@@ -221,7 +239,7 @@ $('levels').addEventListener('click', e=>{
 
 function bestFor(L){
   const sc = data.rows.map(r => r.past ? null : Engine.score(r, L));
-  const b = Engine.bestWindow(sc.map(s => s && s.total));
+  const b = Engine.bestWindow(sc.map(s => s && !s.night ? s.total : null));   // daylight hours only
   return {sc, b};
 }
 const fmtH = h => (h/0.3048).toFixed(1).replace('.0','') + ' ft';
@@ -244,7 +262,7 @@ function render(){
     myBand==='g' ? `For your level: go. Best window ${hr(win[0].hour)} to ${hr(win[1].hour+1)}.` :
     myBand==='o' ? `For your level: marginal. If you go, aim for ${hr(win[0].hour)} to ${hr(win[1].hour+1)} and stay close to shore.` :
     'For your level: skip it, or take a lesson with a school.';
-  const ref = win[0] || usable[0], s0 = Engine.score({...ref, daylight:true}, level);
+  const ref = win[0] || usable[0], s0 = Engine.score({...ref, daylight:true}, level) || {type:'cross'};
   const reasons = [];
   reasons.push(`Waves are ${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)}). ${ref.h > CONFIG.levels[level-1].maxH ? 'That is bigger than level '+level+' should handle.' : ref.h < CONFIG.levels[level-1].idealMin ? 'Small, so expect a slow, mellow session.' : 'A comfortable size for level '+level+'.'}`);
   reasons.push(`Wind is ${s0.type==='offshore'?'blowing off the land (clean waves)':s0.type==='onshore'?'blowing onto the beach (choppy, messy waves)':'blowing along the beach (a bit bumpy)'} at ${Math.round(ref.windMph)} mph.`);
@@ -265,7 +283,7 @@ function render(){
   const sst = usable.find(r=>r.sst!=null)?.sst;
   const t = x => x.slice(11,16);
 
-  $('out').innerHTML = `
+  $('out').innerHTML = `${fcFrom ? `<p class="legend">No wave data right at ${esc(place)}, so this uses the forecast at ${esc(fcFrom)}.</p>` : ''}
   <div class="verdict ${cls}" role="status">
     <h2>${cls==='good'?'✓':cls==='ok'?'~':'✕'} ${title}</h2>
     <p class="for">${forYou}</p>
@@ -280,113 +298,193 @@ function render(){
     <dt>${term('Period','Seconds between wave crests. Beginners like 6 to 10.')}</dt><dd>${Math.round(ref.period)} seconds</dd>
     <dt>Wind</dt><dd>${Math.round(ref.windMph)} mph, ${s0.type}</dd>
     <dt>Water</dt><dd>${sst!=null ? Math.round(sst)+'°C: wear '+Engine.wetsuit(sst) : 'not available'}</dd>
-    <dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></dl></section>
-  <section class="card" id="spots"></section>`;
+    <dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></dl></section>`;
   drawSpots();
 }
 
-async function run(lat, lon, name){
-  $('out').innerHTML = '<div class="skel" aria-label="Loading"></div>';
-  try { data = await loadForecast(lat, lon); place = name; center = {lat, lon}; spotsData = null; render(); loadSpots(lat, lon); }
-  catch(e){ data = null; $('out').innerHTML = `<div class="err">Couldn't load the forecast (${e.message}). Check your connection and try again.</div>`; }
-}
-$('f').addEventListener('submit', async e=>{
-  e.preventDefault();
-  const q = $('q').value.trim(); if(!q) return;
-  $('out').innerHTML = '<div class="skel"></div>';
-  try {
-    const g = await get(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=8`);
-    if (!g.results) { $('out').innerHTML = '<div class="err">No place found. Try a nearby town name.</div>'; return; }
-    showPlaces(g.results);
-  } catch(e){ $('out').innerHTML = `<div class="err">Search failed (${e.message}). Try again.</div>`; }
-});
-$('geo').addEventListener('click', ()=>{
-  if (!navigator.geolocation) { $('out').innerHTML = '<div class="err">Location isn’t available in this browser. Search for a beach instead.</div>'; return; }
-  navigator.geolocation.getCurrentPosition(p => { $('places').innerHTML = ''; run(p.coords.latitude, p.coords.longitude, 'your location'); },
-    () => { $('out').innerHTML = '<div class="err">Location permission was denied. Search for a beach instead.</div>'; });
-});
+const R_ = Math.PI / 180;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const hav = (a,b,c,d) => { const x=(c-a)*R_, y=(d-b)*R_, q=Math.sin(x/2)**2+Math.cos(a*R_)*Math.cos(c*R_)*Math.sin(y/2)**2; return 12742*Math.asin(Math.sqrt(q)); };
+const bearing = (a,b,c,d) => { const y=Math.sin((d-b)*R_)*Math.cos(c*R_), x=Math.cos(a*R_)*Math.sin(c*R_)-Math.sin(a*R_)*Math.cos(c*R_)*Math.cos((d-b)*R_); return (Math.atan2(y,x)/R_+360)%360; };
+let spotsMsg = '', center = null, spotsData = null, map = null, runId = 0, fcFrom = null;
+const hasWaves = d => !!d && d.rows.some(r => !r.past && r.h != null);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 async function getT(u, ms){
   const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
   try { const r = await fetch(u, {signal:c.signal}); if (!r.ok) throw new Error(r.status === 429 ? 'the free map-data server is busy' : 'HTTP '+r.status); return await r.json(); }
   catch(e){ throw e.name === 'AbortError' ? new Error('timed out') : e; }
   finally { clearTimeout(t); }
 }
-async function overpass(q){   // tries the main server, then a mirror
+async function overpass(q){   // main server, then mirrors, then one more pass after a short wait
   let err;
-  for (const h of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter']){
-    try { return await getT(h + '?data=' + encodeURIComponent(q), 20000); } catch(e){ err = e; }
+  for (let pass = 0; pass < 2; pass++){
+    for (const h of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter']){
+      try { return await getT(h + '?data=' + encodeURIComponent(q), 25000); } catch(e){ err = e; }
+    }
+    if (!pass) await sleep(2000);
   }
   throw err;
 }
-function showPlaces(rs){
-  const label = p => [p.name, p.admin1, p.country].filter(Boolean).join(', ');
-  $('places').innerHTML = `<label class="pl">Is this the right place? Pick another if not.<select id="pl">${rs.map((p,i)=>`<option value="${i}">${esc(label(p))}</option>`).join('')}</select></label>`;
-  const go = () => { const p = rs[+$('pl').value]; run(p.latitude, p.longitude, p.name); };
-  $('pl').addEventListener('change', go); go();
-}
-/* ========= Spot finder: beaches from OpenStreetMap, drive times from OSRM, map from Leaflet ========= */
-let spotsMsg = '', center = null, spotsData = null, map = null, spotRun = 0;
-const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const R_ = Math.PI / 180;
-const hav = (a,b,c,d) => { const x=(c-a)*R_, y=(d-b)*R_, q=Math.sin(x/2)**2+Math.cos(a*R_)*Math.cos(c*R_)*Math.sin(y/2)**2; return 12742*Math.asin(Math.sqrt(q)); };
-const bearing = (a,b,c,d) => { const y=Math.sin((d-b)*R_)*Math.cos(c*R_), x=Math.cos(a*R_)*Math.sin(c*R_)-Math.sin(a*R_)*Math.cos(c*R_)*Math.cos((d-b)*R_); return (Math.atan2(y,x)/R_+360)%360; };
 
-/* OSM coastlines are drawn with land on the left, so the sea (the direction a beach faces) is 90° to the right. */
+/* ========= Place search: a proper dropdown (combobox) ========= */
+const qEl = $('q'), sg = $('sugg');
+let found = [], act = -1, sSeq = 0, sTimer = 0;
+const sCache = new Map(), uniq = a => [...new Set(a.filter(Boolean))];
+
+async function searchPlaces(q){
+  if (sCache.has(q)) return sCache.get(q);
+  let out = null;
+  try {
+    const g = await get(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=8&language=en&format=json`);
+    out = (g.results || []).map(p => ({name:p.name, lat:p.latitude, lon:p.longitude, pop:p.population, sub:uniq([p.admin2, p.admin1, p.country]).join(', ')}));
+  } catch(e){}
+  if (!out || !out.length){   // beaches and landmarks aren't in that list, so fall back to OpenStreetMap search (Photon)
+    try {
+      const g = await get(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8&lang=en`);
+      out = g.features.filter(f => f.properties.name).map(f => { const p = f.properties;
+        return {name:p.name, lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0], sub:uniq([p.osm_value==='beach'?'Beach':'', p.city||p.county, p.state, p.country]).join(', ')}; });
+    } catch(e){ if (out === null) throw e; }
+  }
+  const seen = new Set();
+  out = out.filter(p => { const k = p.name + p.lat.toFixed(1) + p.lon.toFixed(1); if (seen.has(k)) return false; seen.add(k); return true; });
+  sCache.set(q, out); return out;
+}
+function showSugg(items, msg){
+  act = -1; found = items || [];
+  sg.innerHTML = msg ? `<li class="msg" role="presentation">${msg}</li>` :
+    found.map((p,i) => `<li role="option" id="o${i}" data-i="${i}" aria-selected="false"><b>${esc(p.name)}</b><small>${esc(p.sub)}${p.pop ? ' · pop. '+p.pop.toLocaleString() : ''}</small></li>`).join('');
+  sg.hidden = false; qEl.setAttribute('aria-expanded', 'true');
+}
+function hideSugg(){ sg.hidden = true; qEl.setAttribute('aria-expanded', 'false'); qEl.removeAttribute('aria-activedescendant'); }
+function setAct(i){
+  const o = sg.querySelectorAll('[role=option]'); if (!o.length) return;
+  act = (i + o.length) % o.length;
+  o.forEach((el,k) => el.setAttribute('aria-selected', k === act));
+  qEl.setAttribute('aria-activedescendant', o[act].id); o[act].scrollIntoView({block:'nearest'});
+}
+function choose(p){
+  qEl.value = p.name; hideSugg();
+  $('where').innerHTML = `Surf near <b>${esc(p.name)}</b>${p.sub ? ', '+esc(p.sub) : ''} ${found.length > 1 ? '<button type="button" class="link" id="wrong">Wrong place?</button>' : ''}`;
+  const w = $('wrong'); if (w) w.onclick = () => { showSugg(found); qEl.focus(); };
+  run(p.lat, p.lon, p.name);
+}
+async function lookup(q){
+  const my = ++sSeq; showSugg([], 'Searching…');
+  try {
+    const rs = await searchPlaces(q); if (my !== sSeq) return null;
+    rs.length ? showSugg(rs) : showSugg([], 'No places found. Try a nearby town or beach name.');
+    return rs;
+  } catch(e){ if (my === sSeq) showSugg([], 'Search failed. Check your connection and try again.'); return null; }
+}
+qEl.addEventListener('input', () => {
+  clearTimeout(sTimer); const q = qEl.value.trim();
+  if (q.length < 2){ sSeq++; hideSugg(); return; }
+  sTimer = setTimeout(() => lookup(q), 250);
+});
+qEl.addEventListener('keydown', e => {
+  if (sg.hidden){ if (e.key === 'ArrowDown' && found.length){ e.preventDefault(); showSugg(found); setAct(0); } return; }
+  if (e.key === 'ArrowDown'){ e.preventDefault(); setAct(act+1); }
+  else if (e.key === 'ArrowUp'){ e.preventDefault(); setAct(act-1); }
+  else if (e.key === 'Escape') hideSugg();
+  else if (e.key === 'Enter' && act >= 0){ e.preventDefault(); choose(found[act]); }
+});
+sg.addEventListener('click', e => { const li = e.target.closest('[data-i]'); if (li) choose(found[+li.dataset.i]); });
+document.addEventListener('click', e => { if (!e.target.closest('.sbox')) hideSugg(); });
+$('f').addEventListener('submit', async e => {   // Enter or "Check surf": go with the top match; "Wrong place?" shows the rest
+  e.preventDefault(); clearTimeout(sTimer);
+  const q = qEl.value.trim(); if (q.length < 2) return;
+  const rs = await lookup(q); if (rs && rs.length) choose(rs[0]);
+});
+$('geo').addEventListener('click', () => {
+  hideSugg();
+  if (!navigator.geolocation) { $('out').innerHTML = '<div class="err">Location isn’t available in this browser. Search for a beach instead.</div>'; return; }
+  navigator.geolocation.getCurrentPosition(p => { qEl.value = ''; found = []; $('where').textContent = 'Surf near your location'; run(p.coords.latitude, p.coords.longitude, 'your location'); },
+    () => { $('out').innerHTML = '<div class="err">Location permission was denied. Search for a beach instead.</div>'; });
+});
+
+/* ========= Run: forecast and beaches load side by side ========= */
+async function run(lat, lon, name){
+  const id = ++runId;
+  place = name; center = {lat, lon}; data = null; spotsData = null; spotsMsg = ''; fcFrom = null;
+  $('out').innerHTML = '<div class="skel" aria-label="Loading"></div>';
+  $('spots').hidden = false; drawSpots();
+  const fcP = loadForecast(lat, lon).then(d => ({d}), e => ({e}));
+  const spP = findSpots(lat, lon).then(l => ({l}), e => ({e}));
+  const fc = await fcP; if (id !== runId) return;
+  if (fc.e) $('out').innerHTML = `<div class="err">Couldn't load the forecast (${esc(fc.e.message)}). Check your connection and try again.</div>`;
+  else if (hasWaves(fc.d)){ data = fc.d; render(); }
+  else $('out').innerHTML = `<div class="err">There's no wave data right at ${esc(name)}, so it may not be on the coast. Looking for surf beaches nearby…</div>`;
+  const sp = await spP; if (id !== runId) return;
+  if (sp.e){
+    spotsMsg = `<h3>Nearby beaches</h3><div class="err">Couldn't load nearby beaches (${esc(sp.e.message)}). The free map-data servers are sometimes slow. <button type="button" id="retry">Try again</button></div>`;
+    drawSpots(); return;
+  }
+  spotsData = sp.l; await addDrive(lat, lon, spotsData); if (id !== runId) return;
+  if (!data && !fc.e && spotsData.length){   // searched point isn't on the sea: borrow the nearest beach's forecast
+    try { const s = spotsData[0], d = await loadForecast(s.lat, s.lon); if (id !== runId) return; if (hasWaves(d)){ data = d; fcFrom = s.name; } } catch(e){}
+  }
+  if (data) fcFrom ? render() : drawSpots();
+  else {
+    $('spots').hidden = true;
+    if (!fc.e) $('out').innerHTML = `<div class="err">No wave forecast is available near ${esc(name)} right now. Try a coastal town.</div>`;
+  }
+}
+
+/* ========= Spot finder: beaches from OpenStreetMap, drive times from OSRM, map from Leaflet ========= */
+/* OSM coastlines are drawn with land on the left, so the sea (the direction a beach faces) is 90° to the right.
+   The angle is measured along a stretch of coast (about 1.4 km) so small bumps don't throw it off. */
 function facing(s, coast){
-  const k = Math.cos(s.lat*R_); let best = 1e9, brg = null;
-  coast.forEach(w => { const g = w.geometry;
+  const k = Math.cos(s.lat*R_); let best = null, bd = 1e9;
+  const pick = minNodes => coast.forEach(w => { const g = w.geometry; if (g.length < minNodes) return;   // skip islets and rocks first
     for (let i=0; i<g.length-1; i++){
       const dx=((g[i].lon+g[i+1].lon)/2-s.lon)*k, dy=(g[i].lat+g[i+1].lat)/2-s.lat, d=dx*dx+dy*dy;
-      if (d < best){ best = d; const a=g[Math.max(0,i-3)], b=g[Math.min(g.length-1,i+4)]; brg = bearing(a.lat,a.lon,b.lat,b.lon); }
+      if (d < bd){ bd = d; best = {g, i}; }
     }});
-  return brg == null ? null : (brg + 90) % 360;
+  pick(8); if (!best) pick(0);
+  if (!best || Math.sqrt(bd)*111000 > CONFIG.spots.coastMatchM*2) return null;   // not on the open coast (lake, river, inland)
+  const {g, i} = best, len = (a,b) => hav(a.lat,a.lon,b.lat,b.lon)*1000;
+  let j = i, m = i+1, acc = 0;
+  while (j > 0 && acc < CONFIG.spots.facingWalkM){ acc += len(g[j-1], g[j]); j--; }
+  acc = 0;
+  while (m < g.length-1 && acc < CONFIG.spots.facingWalkM){ acc += len(g[m], g[m+1]); m++; }
+  if (len(g[j], g[m]) < 50) return null;
+  return (bearing(g[j].lat,g[j].lon,g[m].lat,g[m].lon) + 90) % 360;
 }
 
-async function loadSpots(lat, lon){
-  const id = ++spotRun, box = $('spots'); spotsMsg = ''; if (!box) return;
-  box.innerHTML = '<h3>Finding beaches nearby…</h3><div class="skel"></div>';
+async function findSpots(lat, lon){
+  const S = CONFIG.spots, ck = 'sb-spots2:' + lat.toFixed(2) + ',' + lon.toFixed(2);
+  try { const c = JSON.parse(localStorage.getItem(ck) || 'null'); if (c && Date.now() - c.t < 864e5) return c.list; } catch(e){}
+  // one request: named beaches, plus the coastline within reach of each (to get their angles)
+  const j = await overpass(`[out:json][timeout:25];nwr["natural"="beach"]["name"](around:${S.radiusKm*1000},${lat},${lon})->.b;.b out center tags;way["natural"="coastline"](around.b:${S.coastMatchM});out geom;`);
+  const coast = j.elements.filter(e => e.type==='way' && e.geometry && e.tags && e.tags.natural==='coastline');
+  const seen = new Map();
+  j.elements.filter(e => e.tags && e.tags.natural==='beach' && e.tags.name && !['private','no'].includes(e.tags.access)).forEach(e => {
+    const c = e.center || e; if (c.lat == null) return;
+    const km = hav(lat,lon,c.lat,c.lon), n = e.tags.name;
+    if (!seen.has(n) || seen.get(n).km > km) seen.set(n, {name:n, lat:c.lat, lon:c.lon, km});
+  });
+  const list = [...seen.values()].sort((a,b) => a.km-b.km).map(s => ({...s, facing:facing(s, coast)}))
+    .filter(s => s.facing != null).slice(0, S.max);
+  if (list.length) try { localStorage.setItem(ck, JSON.stringify({t:Date.now(), list})); } catch(e){}
+  return list;
+}
+
+async function addDrive(lat, lon, list){   // real road times from OSRM; falls back to a rough estimate
+  list.forEach(s => s.km = hav(lat, lon, s.lat, s.lon));
+  list.sort((a,b) => a.km - b.km);
   try {
-    const ck = 'sb-spots:' + lat.toFixed(2) + ',' + lon.toFixed(2);
-    let list = null;
-    try { const c = JSON.parse(localStorage.getItem(ck) || 'null'); if (c && Date.now() - c.t < 864e5) list = c.list; } catch(e){}
-    if (!list){
-    const jb = await overpass(`[out:json][timeout:20];nwr["natural"="beach"]["name"](around:40000,${lat},${lon});out center tags;`);
-    const seen = new Map();
-    jb.elements.filter(e => e.tags && e.tags.name).forEach(e => {
-      const c = e.center || e, km = hav(lat,lon,c.lat,c.lon), n = e.tags.name;
-      if (c.lat == null) return;
-      if (!seen.has(n) || seen.get(n).km > km) seen.set(n, {name:n, lat:c.lat, lon:c.lon, km});
-    });
-    list = [...seen.values()].sort((a,b)=>a.km-b.km).slice(0,12);
-    if (list.length){
-      const cq = `[out:json][timeout:20];(${list.map(s=>`way["natural"="coastline"](around:200,${s.lat},${s.lon});`).join('')});out geom;`;
-      const coast = (await overpass(cq)).elements.filter(e => e.type==='way' && e.geometry);
-      list.forEach(s => s.facing = facing(s, coast));
-      list = list.filter(s => s.facing != null);
-      if (!list.length) throw new Error('could not work out beach angles');
-    }
-      if (list.length) try { localStorage.setItem(ck, JSON.stringify({t:Date.now(), list})); } catch(e){}
-    }
-    list = list.filter(s => s.facing != null);
-    try {   // real road drive times; falls back to a rough estimate
-      const co = [lon+','+lat, ...list.map(s=>s.lon+','+s.lat)].join(';');
-      const d = await getT(`https://router.project-osrm.org/table/v1/driving/${co}?sources=0&annotations=duration`, 8000);
-      list.forEach((s,i) => s.min = Math.round(d.durations[0][i+1]/60));
-    } catch(e){}
-    list.forEach(s => { if (!(s.min >= 0)){ s.min = Math.round(s.km*1.4/50*60); s.est = true; } });
-    if (id !== spotRun) return;
-    spotsData = list; drawSpots();
-  } catch(e){
-    if (id !== spotRun) return;
-    spotsMsg = `<h3>Nearby beaches</h3><div class="err">Couldn't load nearby beaches (${esc(e.message)}). The free map-data servers are sometimes slow. <button type="button" id="retry">Try again</button></div>`;
-    drawSpots();
-  }
+    const co = [lon+','+lat, ...list.map(s => s.lon+','+s.lat)].join(';');
+    const d = await getT(`https://router.project-osrm.org/table/v1/driving/${co}?sources=0&annotations=duration`, 8000);
+    list.forEach((s,i) => { const v = d.durations[0][i+1]; if (v != null) s.min = Math.round(v/60); });
+  } catch(e){}
+  list.forEach(s => { if (!(s.min >= 0)){ s.min = Math.round(s.km*1.4/50*60); s.est = true; } });
 }
 
 function scoreSpot(s, L){
   const sc = data.rows.map(r => (r.past || r.h == null) ? null :
     Engine.score({...r, h: r.h * Engine.exposure(r.waveFrom, s.facing), waveFrom: s.facing}, L));
-  const b = Engine.bestWindow(sc.map(x => x && x.total));
+  const b = Engine.bestWindow(sc.map(x => x && !x.night ? x.total : null));   // daylight hours only
   if (b.i < 0) return {total:0, none:true};
   const r = data.rows[b.i], e = Engine.exposure(r.waveFrom, s.facing);
   return {total:Math.round(b.avg), win:[r, data.rows[b.i+1]], h:r.h*e, e, type:sc[b.i].type, wind:r.windMph};
@@ -394,17 +492,18 @@ function scoreSpot(s, L){
 
 function drawSpots(){
   const box = $('spots'); if (!box) return;
-  if (!spotsData){
-    box.innerHTML = spotsMsg || '<h3>Finding beaches nearby…</h3><div class="skel"></div>';
-    const rb = $('retry'); if (rb) rb.onclick = () => loadSpots(center.lat, center.lon);
+  if (map){ map.remove(); map = null; }
+  if (!spotsData || !data){
+    box.innerHTML = spotsMsg || '<h3>Finding beaches nearby…</h3><p class="legend">The free map server can take a few seconds.</p><div class="skel"></div>';
+    const rb = $('retry'); if (rb) rb.onclick = () => run(center.lat, center.lon, place);
     return;
   }
-  if (map){ map.remove(); map = null; }
   const here = bestFor(level).b.avg;
   const ranked = spotsData.map(s => ({s, r:scoreSpot(s, level)}))
     .sort((a,b) => (b.r.total - b.s.min*CONFIG.drivePenaltyPerMin) - (a.r.total - a.s.min*CONFIG.drivePenaltyPerMin)).slice(0,8);
-  if (!ranked.length){ box.innerHTML = '<h3>Nearby beaches</h3><p>No named beaches found within 40 km. Try a coastal town.</p>'; return; }
+  if (!ranked.length){ box.innerHTML = `<h3>Nearby beaches</h3><p>No surf beaches found within ${CONFIG.spots.radiusKm} km (lakes and rivers are skipped). Try a coastal town.</p>`; return; }
   const goodOnes = ranked.filter(x => x.r.total >= CONFIG.okAt).length;
+  const title = here >= CONFIG.goodAt ? 'Other beaches nearby' : 'Where to surf instead';
   const intro = here < CONFIG.okAt && goodOnes ? `Not great here for level ${level}, but these nearby beaches should be better:`
     : goodOnes ? `Nearby beaches, best first for level ${level}:`
     : `Nothing nearby looks good for level ${level} today. These are the least bad. Consider another day or a lesson with a surf school.`;
@@ -417,7 +516,7 @@ function drawSpots(){
     return `<button type="button" class="spot" data-i="${i}"><b>${esc(s.name)}</b><span class="tag ${b}">${tag} (${r.total})</span>
       <span> · about ${s.min} min drive${s.est?' (estimate)':''}, ${s.km.toFixed(0)} km${when}</span><small>${shelter}${wind}${big}</small></button>`;
   }).join('');
-  box.innerHTML = `<h3>Where to surf instead</h3><p>${intro}</p><div id="map" role="region" aria-label="Map of nearby beaches"></div>${cards}
+  box.innerHTML = `<h3>${title}</h3><p>${intro}</p><div id="map" role="region" aria-label="Map of nearby beaches"></div>${cards}
     <p class="legend">Beach angles are estimated from the coastline, so local knowledge matters. Ask a lifeguard or surf school.</p>`;
   if (typeof L === 'undefined'){ $('map').outerHTML = '<p class="legend">Map couldn’t load (check your connection).</p>'; return; }
   map = L.map('map', {scrollWheelZoom:false});
