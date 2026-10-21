@@ -99,7 +99,7 @@ button:disabled{opacity:.5;cursor:default}
 .daychips button{flex:none;min-width:68px;padding:4px 8px;line-height:1.25;font-size:.85rem}
 .daychips button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .spot .tag.r{color:var(--mute);font-weight:600;font-size:.8rem}
-.pin.r{background:#5b6b73}
+.days em.bad{color:var(--bad);font-weight:700;font-style:normal}
 .days .calm{color:var(--mute);font-weight:600}
 .days .wk p{margin:6px 0 0;font-size:.9rem;color:var(--ink)}
 .days button.link{min-height:40px;padding:8px 2px 0;font-size:.85rem}
@@ -291,7 +291,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.12 · 21 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.13 · 21 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -343,7 +343,7 @@ function weekHTML(){
     const star = k === topK && band !== 'r' ? ' ★ Best day' : '';
     const big = x.h > CONFIG.levels[level-1].maxH ? ' · ⚠ Bigger than level '+level+' should handle' : '';
     const info = `${Engine.bodyHeight(x.h)} (${fmtH(x.h)}) · ${x.period != null ? Math.round(x.period)+'s · ' : ''}${windTxt[r.type]}${big}${trust ? ' · '+trust : ''}`;
-    if (band === 'r') return `<li><b>${lead}${nm}</b><div class="wk" data-k="${k}"></div><small>Not ideal here · best ${hr(r.from.hour)} to ${hr(r.to.hour+1)} · ${info}</small>${show}</li>`;   // better places first, the bad news small and grey
+    if (band === 'r') return `<li><b>${lead}${nm}</b><div class="wk" data-k="${k}"></div><small><em class="bad">✕ Not ideal here</em> · best ${hr(r.from.hour)} to ${hr(r.to.hour+1)} · ${info}</small>${show}</li>`;   // better places first, the bad news small and grey
     return `<li><b>${lead}${nm}${star}</b><span class="tag ${band}">${tag}</span><span>Best ${hr(r.from.hour)} to ${hr(r.to.hour+1)}</span>
       <small>${Engine.bodyHeight(x.h)} (${fmtH(x.h)}) · ${x.period != null ? Math.round(x.period)+'s · ' : ''}${windTxt[r.type]}${big}${trust ? ' · '+trust : ''}</small>
       ${band === 'g' ? '' : `<div class="wk" data-k="${k}"></div>`}${show}</li>`;
@@ -374,7 +374,7 @@ function render(){
   let cls, title;
   if (l1.b.avg >= CONFIG.goodAt){ cls='good'; title='Good for beginners'; }
   else if (l3.b.avg >= CONFIG.goodAt){ cls='ok'; title="Okay if you're level 3+"; }
-  else { cls='bad'; title='Not great here'; }
+  else { cls='bad'; title='→ Finding a better coast…'; }
   const i = mine.b.i, win = i>=0 ? rows.slice(i, i+2) : [];
   const mAvg = Math.round(mine.b.avg);
   const myBand = Engine.band(mAvg);
@@ -408,7 +408,7 @@ function render(){
 
   $('out').innerHTML = `${fcFrom ? `<p class="legend">No wave data right at ${esc(place)}, so this uses the forecast at ${esc(fcFrom)}.</p>` : ''}
   <div class="verdict ${cls}" role="status">
-    <h2 id="vtitle">${cls==='good'?'✓':cls==='ok'?'~':'✕'} ${title}</h2>
+    <h2 id="vtitle">${cls==='good'?'✓ ':cls==='ok'?'~ ':''}${title}</h2>
     <p class="for">${forYou}</p>
     <ul>${reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
     <p class="cond"><b>Conditions ${data.label}:</b> ${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)}) waves · ${Math.round(ref.period)}s period · ${Math.round(ref.windMph)} mph ${s0.type} wind${sst!=null ? ' · '+Math.round(sst)+'°C water' : ''}</p>
@@ -740,12 +740,12 @@ function coastInfo(all){   // which coast is better, which to avoid
 }
 function adviseCoasts(all){
   const box = $('advice'), t = $('vtitle'); if (!box || !t) return;   // only exists on a red verdict card
-  if (!all.length){ box.innerHTML = ''; t.textContent = '✕ Not great here'; return; }
+  if (!all.length){ box.innerHTML = ''; t.textContent = '○ Not ideal here'; return; }
   const {better, avoid} = coastInfo(all);
   const go = better && better.ok.slice(0,3).map(x => `${esc(x.s.name)} (${roughFt(x.r.h)} · ${Math.round(x.r.period)}s · ${x.s.min} min drive)`).join(', ');
   box.innerHTML = (better ? `<p class="adv"><b>Better:</b> the ${better.name}. Try ${go}.</p>` : '<p class="adv">Nowhere within your travel distance suits your level '+data.label+'. Try another day, a bigger distance or a different time of day.</p>')
     + (avoid.length ? `<p class="adv"><b>Avoid:</b> ${avoid.map(i => `the ${i.name}${i.h != null ? ' ('+roughFt(i.h)+(i.wind ? ', '+windTxt[i.wind[0]] : '')+')' : ''}`).join('; ')}.</p>` : '');
-  t.textContent = better ? '→ Better on the ' + better.name : '→ No good coast nearby today';
+  t.textContent = better ? '→ Better on the ' + better.name : '○ No good coast nearby ' + data.label;
 }
 
 function drawSpots(){
@@ -755,6 +755,7 @@ function drawSpots(){
   if (!spotsData || !data){
     box.innerHTML = head + (spotsMsg || '<h3>Finding beaches nearby…</h3><p class="legend">Asking the free map servers. This can take up to 30 seconds.</p><div class="skel"></div>');
     if (spotsMsg && $('advice')) $('advice').innerHTML = '';
+    if (spotsMsg && $('vtitle')) $('vtitle').textContent = '○ Not ideal here';   // beaches failed: don't leave "finding…" up
     bindReach(); const rb = $('retry'); if (rb) rb.onclick = () => run(center.lat, center.lon, place);
     return;
   }
@@ -791,7 +792,7 @@ function drawSpots(){
   L.circleMarker([center.lat, center.lon], {radius:7, color:'#fff', weight:2, fillColor:'#0c2a31', fillOpacity:1}).addTo(map).bindTooltip('You searched here');
   const markers = all.map(({s,r},i) => { const b = Engine.band(r.total);
     return L.marker([s.lat, s.lon], {icon:L.divIcon({className:'', iconSize:[96,24], iconAnchor:[48,12],
-      html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'○'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`}), zIndexOffset:1000-i}).addTo(map)
+      html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'✕'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`}), zIndexOffset:1000-i}).addTo(map)
       .bindPopup(`<b>${esc(s.name)}</b><br>${r.none ? '' : roughFt(r.h)+' waves · '+Math.round(r.period)+'s swell<br>'}About ${s.min} min drive`); });
   map.fitBounds(L.latLngBounds([[center.lat, center.lon], ...all.map(x => [x.s.lat, x.s.lon])]).pad(0.15));
   box.querySelectorAll('.spot[data-i]').forEach(el => el.addEventListener('click', () => {
