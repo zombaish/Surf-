@@ -88,6 +88,11 @@ h1 small{font-family:system-ui,sans-serif;font-size:.7rem;font-weight:400;color:
 .whens button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .tl .off{opacity:.35}
 .adv{margin:10px 0 0;font-size:.95rem;color:var(--ink)}
+.days{list-style:none;margin:0;padding:0}
+.days li{border-top:1px solid var(--line);padding:10px 0}.days li:first-child{border-top:0;padding-top:0}
+.days b,.days span{display:block}
+.days .tag{font-weight:700}.days .g{color:var(--good)}.days .o{color:var(--ok)}.days .r{color:var(--bad)}
+.days small{display:block;color:var(--mute);font-size:.8rem;margin-top:2px}
 </style>
 </head>
 <body>
@@ -134,6 +139,7 @@ const CONFIG = {
   periodIdeal: [6, 10],        // seconds, comfortable for beginners
   periodLongPenaltyPerSec: [10, 8, 6, 4, 2], // per level, beyond ideal max
   goodAt: 62, okAt: 40,
+  trust: ['high','high','medium','medium','low','low','low'],   // forecast confidence by days ahead
   drivePenaltyPerMin: 0.25,    // spot ranking: each drive minute costs this many score points
   exposure: {fullWithin: 45, shelteredFrom: 110, minShare: 0.15},  // swell angle vs beach facing
   spots: {probeKm: 1.2, max: 48},
@@ -185,6 +191,12 @@ const Engine = {
     }
     return best;
   },
+  dayBest(rows, L, ok = () => true){   // best 2-hour daylight window in one day's rows, or null
+    const sc = rows.map(r => (r.past || r.h == null) ? null : this.score(r, L));
+    const b = this.bestWindow(sc.map((x,k) => x && !x.night && ok(rows[k]) ? x.total : null));
+    if (b.i < 0) return null;
+    return {avg:b.avg, from:rows[b.i], to:rows[b.i+1], row:rows[b.i], type:sc[b.i].type};
+  },
   exposure(waveFrom, facing){   // share of swell height that reaches a beach facing `facing`
     if (waveFrom == null) return 1;   // unknown swell direction: assume the bigger case
     const c = CONFIG.exposure, d = this.angleDiff(waveFrom, facing);
@@ -207,6 +219,13 @@ const Engine = {
     a(this.score({h:0.4,period:8,windMph:5,windFrom:270,waveFrom:90,daylight:false},1).total===0,'night = 0');
     a(this.bestWindow([null,50,60,null]).i===1,'window skips nulls');
     a(this.exposure(90,90)===1 && this.exposure(270,90)===CONFIG.exposure.minShare,'exposure');
+    const mk = (hour, o={}) => ({t:'x'+hour, hour, h:0.4, period:8, windMph:5, windFrom:270, waveFrom:90, daylight:true, past:false, ...o});
+    const day = [mk(7), mk(8), mk(9), mk(20,{daylight:false})];
+    const db = this.dayBest(day, 1);
+    a(db && db.from.hour>=7 && db.to.hour===db.from.hour+1,'dayBest picks a 2-hour window');
+    a(this.dayBest(day.map(r=>({...r,past:true})),1)===null,'dayBest: all past = null');
+    a(this.dayBest(day,1,r=>r.hour>=12)===null,'dayBest respects the time-of-day filter');
+    a(this.dayBest(day.map(r=>({...r,h:null})),1)===null,'dayBest: no wave data = null');
     console.log('Engine self-test done');
   }
 };
@@ -215,8 +234,8 @@ if (location.search.includes('test')) Engine.selfTest();
 /* ========= Data layer ========= */
 const get = async u => { const r = await fetch(u); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); };
 async function loadForecast(lat, lon){
-  const m = get(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=wave_height,wave_period,wave_direction,sea_surface_temperature&cell_selection=sea&timezone=auto&forecast_days=2`).catch(() => null);   // null = no wave data at this point
-  const w = get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=wind_speed_10m,wind_direction_10m&daily=sunrise,sunset&wind_speed_unit=mph&timezone=auto&forecast_days=2`);
+  const m = get(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=wave_height,wave_period,wave_direction,sea_surface_temperature&cell_selection=sea&timezone=auto&forecast_days=7`).catch(() => null);   // null = no wave data at this point
+  const w = get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=wind_speed_10m,wind_direction_10m&daily=sunrise,sunset&wind_speed_unit=mph&timezone=auto&forecast_days=7`);
   const [marine, wx] = await Promise.all([m, w]);
   if (!marine || !marine.hourly) return null;
   const off = wx.utc_offset_seconds || 0;
@@ -233,13 +252,14 @@ async function loadForecast(lat, lon){
     });
     return {rows, rise, set, label: k ? 'tomorrow' : 'today'};
   };
-  const d0 = build(0);
-  return d0.rows.some(r => r.daylight && !r.past) ? d0 : build(1);   // daylight over? show tomorrow
+  const days = wx.daily.time.map((_, k) => build(k)), d0 = days[0];
+  const main = d0.rows.some(r => r.daylight && !r.past) || !days[1] ? d0 : days[1];   // daylight over? the main card shows tomorrow
+  return {...main, days};   // days: all 7, for the week card
 }
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.8 · 21 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.9 · 21 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null;
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -261,8 +281,33 @@ function bestFor(L){
   return {sc, b};
 }
 const fmtH = h => (h/0.3048).toFixed(1).replace('.0','') + ' ft';
-const hr = h => { const x = h%12||12; return x + (h<12?'am':'pm'); };
+const hr = h => { h %= 24; const x = h%12||12; return x + (h<12?'am':'pm'); };   // 24 wraps to 12am
 const term = (t, def) => `<abbr title="${def}" tabindex="0">${t}</abbr>`;
+
+const trustTxt = {high:'', medium:'Fairly reliable', low:'Less certain, check again closer to the day'};
+function weekHTML(){
+  if (!data.days || data.days.length < 2) return '';
+  const res = data.days.map(d => Engine.dayBest(d.rows, level, inWhen));
+  const adj = res.map(r => !r ? -1 : r.row.h > CONFIG.levels[level-1].maxH ? Math.min(r.avg, CONFIG.goodAt - 1) : r.avg);   // too big for your level: never better than marginal
+  const topK = adj.indexOf(Math.max(...adj));   // first best day only
+  const lis = data.days.map((d,k) => {
+    const r = res[k], iso = (d.rise || '').slice(0,10);
+    const nm = iso ? new Date(iso + 'T12:00:00Z').toLocaleDateString(undefined, {weekday:'short', day:'numeric', month:'short', timeZone:'UTC'}) : 'Day ' + (k+1);
+    const lead = k === 0 ? 'Today, ' : k === 1 ? 'Tomorrow, ' : '';
+    const trust = trustTxt[CONFIG.trust[Math.min(k, CONFIG.trust.length-1)]];
+    if (!d.rows.some(x => x.h != null)) return `<li><b>${lead}${nm}</b><small>No wave data for this day.</small></li>`;
+    if (!r) return `<li><b>${lead}${nm}</b><span class="tag r">✕ ${k===0 && d.rows.every(x => x.past || !x.daylight) ? 'Daylight is over' : 'No suitable window'}</span>${trust ? `<small>${trust}</small>` : ''}</li>`;
+    const b = Engine.band(Math.round(adj[k])), x = r.row;
+    const tag = {g:'✓ Good for level '+level, o:'~ Marginal', r:'✕ Not recommended'}[b];
+    const star = k === topK && b !== 'r' ? ' ★ Best day' : '';
+    const big = x.h > CONFIG.levels[level-1].maxH ? ' · ⚠ Bigger than level '+level+' should handle' : '';
+    return `<li><b>${lead}${nm}${star}</b><span class="tag ${b}">${tag}</span><span>Best ${hr(r.from.hour)} to ${hr(r.to.hour+1)}</span>
+      <small>${Engine.bodyHeight(x.h)} (${fmtH(x.h)}) · ${x.period != null ? Math.round(x.period)+'s · ' : ''}${windTxt[r.type]}${big}${trust ? ' · '+trust : ''}</small></li>`;
+  }).join('');
+  return `<section class="card"><h3>Next 7 days (level ${level}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()})</h3>
+    <ul class="days">${lis}</ul>
+    <p class="legend">Best two-hour daylight window each day, scored for your level at the forecast point above. Forecasts get less certain the further ahead they look.</p></section>`;
+}
 
 function render(){
   const {rows} = data;
@@ -318,7 +363,8 @@ function render(){
     <dt>${term('Period','Seconds between wave crests. Beginners like 6 to 10.')}</dt><dd>${Math.round(ref.period)} seconds</dd>
     <dt>Wind</dt><dd>${Math.round(ref.windMph)} mph, ${s0.type}</dd>
     <dt>Water</dt><dd>${sst!=null ? Math.round(sst)+'°C: wear '+Engine.wetsuit(sst) : 'not available'}</dd>
-    <dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></dl></section>`;
+    <dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></dl></section>
+  ${weekHTML()}`;
   drawSpots();
 }
 
