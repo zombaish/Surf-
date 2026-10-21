@@ -98,10 +98,15 @@ button:disabled{opacity:.5;cursor:default}
 .daychips{position:relative;display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px}
 .daychips button{flex:none;min-width:68px;padding:4px 8px;line-height:1.25;font-size:.85rem}
 .daychips button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.days .tag.r{font-weight:600}
+.spot .tag.r{color:var(--mute);font-weight:600;font-size:.8rem}
+.pin.r{background:#5b6b73}
 .days .calm{color:var(--mute);font-weight:600}
 .days .wk p{margin:6px 0 0;font-size:.9rem;color:var(--ink)}
 .days button.link{min-height:40px;padding:8px 2px 0;font-size:.85rem}
+@media (prefers-color-scheme:dark){.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.95) contrast(.9)}}
+abbr[data-def]{cursor:pointer}
+#tip{position:fixed;left:12px;right:12px;bottom:12px;max-width:616px;margin:0 auto;background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:12px;font-size:.9rem;z-index:2000;box-shadow:0 4px 18px #0006}
+.heads{margin:0;padding-left:1.1em}.heads li{margin:6px 0}
 </style>
 </head>
 <body>
@@ -148,6 +153,7 @@ const CONFIG = {
   periodIdeal: [6, 10],        // seconds, comfortable for beginners
   periodLongPenaltyPerSec: [10, 8, 6, 4, 2], // per level, beyond ideal max
   goodAt: 62, okAt: 40,
+  hazard: {ripH:1.0, ripPeriod:9, longPeriod:12, onshoreMph:15, coldC:12, daylightHours:2},   // heads-up thresholds
   trust: ['high','high','medium','medium','low','low','low'],   // forecast confidence by days ahead
   drivePenaltyPerMin: 0.25,    // spot ranking: each drive minute costs this many score points
   exposure: {fullWithin: 45, shelteredFrom: 110, minShare: 0.15},  // swell angle vs beach facing
@@ -206,6 +212,16 @@ const Engine = {
     if (b.i < 0) return null;
     return {avg:b.avg, from:rows[b.i], to:rows[b.i+1], row:rows[b.i], type:sc[b.i].type};
   },
+  hazards(x, L, c = {}){   // x: a forecast row, c: {sst, hoursLeft}. Plain-English heads-ups, most important first.
+    const H = CONFIG.hazard, lv = CONFIG.levels[L-1], out = [];
+    if (x.h > lv.maxH) out.push(`Waves are bigger than level ${L} should handle.`);
+    if (x.period >= H.longPeriod && x.h >= lv.maxH*0.7) out.push('Long-period swell: waves hit harder than they look, and sets can surge much bigger.');
+    if (x.h >= H.ripH && x.period >= H.ripPeriod) out.push('Rip currents are more likely with swell this size. Stay between the flags and ask a lifeguard where the rips are.');
+    if (this.windType(x.windFrom, x.waveFrom ?? x.windFrom + 180) === 'onshore' && x.windMph >= H.onshoreMph) out.push('Strong onshore wind: choppy, messy and tiring to paddle.');
+    if (c.sst != null && c.sst < H.coldC) out.push('Cold water: wear a proper wetsuit, and come in if you start shivering.');
+    if (c.hoursLeft > 0 && c.hoursLeft <= H.daylightHours) out.push(`Only about ${c.hoursLeft} hour${c.hoursLeft === 1 ? '' : 's'} of daylight left. Leave time to get out and get changed.`);
+    return out;
+  },
   exposure(waveFrom, facing){   // share of swell height that reaches a beach facing `facing`
     if (waveFrom == null) return 1;   // unknown swell direction: assume the bigger case
     const c = CONFIG.exposure, d = this.angleDiff(waveFrom, facing);
@@ -235,6 +251,12 @@ const Engine = {
     a(this.dayBest(day.map(r=>({...r,past:true})),1)===null,'dayBest: all past = null');
     a(this.dayBest(day,1,r=>r.hour>=12)===null,'dayBest respects the time-of-day filter');
     a(this.dayBest(day.map(r=>({...r,h:null})),1)===null,'dayBest: no wave data = null');
+    const hx = {h:0.4, period:8, windMph:5, windFrom:270, waveFrom:90};
+    a(this.hazards(hx,1).length===0,'calm day: no heads-ups');
+    a(this.hazards({...hx,h:1.2,period:10},1).some(m=>/Rip/.test(m)),'rip heads-up');
+    a(this.hazards(hx,1,{sst:9}).some(m=>/Cold/.test(m)),'cold water heads-up');
+    a(this.hazards({...hx,windFrom:90,windMph:20},1).some(m=>/onshore/.test(m)),'onshore heads-up');
+    a(this.hazards(hx,1,{hoursLeft:1}).some(m=>/daylight/.test(m)),'daylight heads-up');
     console.log('Engine self-test done');
   }
 };
@@ -269,7 +291,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.10 · 21 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.12 · 21 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -292,7 +314,13 @@ function bestFor(L){
 }
 const fmtH = h => (h/0.3048).toFixed(1).replace('.0','') + ' ft';
 const hr = h => { h %= 24; const x = h%12||12; return x + (h<12?'am':'pm'); };   // 24 wraps to 12am
-const term = (t, def) => `<abbr title="${def}" tabindex="0">${t}</abbr>`;
+const term = (t, def) => `<abbr title="${def}" data-def="${def}" tabindex="0" role="button">${t}</abbr>`;
+const tip = document.createElement('div'); tip.id = 'tip'; tip.hidden = true; tip.setAttribute('role', 'status'); document.body.appendChild(tip);
+document.addEventListener('click', e => { const a = e.target.closest('abbr[data-def]'); if (a){ tip.textContent = a.dataset.def; tip.hidden = false; } else tip.hidden = true; });   // tap a term to read it, tap anywhere else to close
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') tip.hidden = true;
+  else if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('abbr[data-def]')){ e.preventDefault(); e.target.click(); }
+});
 
 const trustTxt = {high:'', medium:'Fairly reliable', low:'Less certain, check again closer to the day'};
 let wk = null;   // this week's per-day results, reused when the better/avoid advice is filled in
@@ -311,9 +339,11 @@ function weekHTML(){
     if (!d.rows.some(x => x.h != null)) return `<li><b>${lead}${nm}</b><small>No wave data for this day.</small></li>`;
     if (!r) return `<li><b>${lead}${nm}</b><span class="tag calm">○ ${k===0 && d.rows.every(x => x.past || !x.daylight) ? 'Daylight is over' : 'No suitable window'}</span>${trust ? `<small>${trust}</small>` : ''}${show}</li>`;
     const band = Engine.band(Math.round(adj[k])), x = r.row;
-    const tag = {g:'✓ Good for level '+level, o:'~ Marginal', r:'○ Not recommended here'}[band];
+    const tag = {g:'✓ Good for level '+level, o:'~ Marginal'}[band];
     const star = k === topK && band !== 'r' ? ' ★ Best day' : '';
     const big = x.h > CONFIG.levels[level-1].maxH ? ' · ⚠ Bigger than level '+level+' should handle' : '';
+    const info = `${Engine.bodyHeight(x.h)} (${fmtH(x.h)}) · ${x.period != null ? Math.round(x.period)+'s · ' : ''}${windTxt[r.type]}${big}${trust ? ' · '+trust : ''}`;
+    if (band === 'r') return `<li><b>${lead}${nm}</b><div class="wk" data-k="${k}"></div><small>Not ideal here · best ${hr(r.from.hour)} to ${hr(r.to.hour+1)} · ${info}</small>${show}</li>`;   // better places first, the bad news small and grey
     return `<li><b>${lead}${nm}${star}</b><span class="tag ${band}">${tag}</span><span>Best ${hr(r.from.hour)} to ${hr(r.to.hour+1)}</span>
       <small>${Engine.bodyHeight(x.h)} (${fmtH(x.h)}) · ${x.period != null ? Math.round(x.period)+'s · ' : ''}${windTxt[r.type]}${big}${trust ? ' · '+trust : ''}</small>
       ${band === 'g' ? '' : `<div class="wk" data-k="${k}"></div>`}${show}</li>`;
@@ -331,7 +361,7 @@ function fillWeek(pool){
     const {better, avoid} = coastInfo(pool.map(s => ({s, r:scoreSpot(s, level, d.rows)})));
     const go = better && better.ok.slice(0,2).map(x => `${esc(x.s.name)} (${roughFt(x.r.h)}, ${x.s.min} min drive)`).join(', ');
     el.innerHTML = better ? `<p><b>Better:</b> the ${better.name}. Try ${go}.</p>` + (avoid.length ? `<p><b>Avoid:</b> the ${avoid.map(i => i.name).join(' and the ')}.</p>` : '')
-      : `<p>Nowhere within your travel distance suits level ${level} that day, so it’s best to skip it or try another day.</p>`;
+      : `<p>Nothing nearby looks ideal for level ${level} that day. Try another day, a bigger distance, or a lesson with a surf school.</p>`;
   });
 }
 
@@ -364,13 +394,16 @@ function render(){
   const bars = day.map(r => {
     const s = r.past ? null : Engine.score(r, level);
     const b = s ? Engine.band(s.total) : 'n';
-    const mark = {g:'✓', o:'~', r:'✕', n:''}[b];
+    const mark = {g:'✓', o:'~', r:'○', n:''}[b];
     const best = (win.some(w => w.t === r.t) ? ' best' : '') + (inWhen(r) ? '' : ' off');
     const ht = s ? Math.max(18, s.total) : 14;
     return `<div class="${b}${best}" style="height:${ht}%" title="${hr(r.hour)}: ${s ? s.total+'/100' : 'past'}">${mark}</div>`;
   }).join('');
   const ticks = day.map(r => `<span>${r.hour%3===0 ? hr(r.hour) : ''}</span>`).join('');
-  const sst = usable.find(r=>r.sst!=null)?.sst;
+  const sst = ref.sst != null ? ref.sst : usable.find(r=>r.sst!=null)?.sst;   // water temperature at the best window
+  const left = rows.filter(r => r.daylight && !r.past).length;
+  const hz = Engine.hazards(ref, level, {sst, hoursLeft: data.k === 0 ? left : null});
+  const heads = hz.length ? `<section class="card"><h3>Heads up</h3><ul class="heads">${hz.map(h => `<li>${h}</li>`).join('')}</ul></section>` : '';
   const t = x => x.slice(11,16);
 
   $('out').innerHTML = `${fcFrom ? `<p class="legend">No wave data right at ${esc(place)}, so this uses the forecast at ${esc(fcFrom)}.</p>` : ''}
@@ -381,10 +414,11 @@ function render(){
     <p class="cond"><b>Conditions ${data.label}:</b> ${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)}) waves · ${Math.round(ref.period)}s period · ${Math.round(ref.windMph)} mph ${s0.type} wind${sst!=null ? ' · '+Math.round(sst)+'°C water' : ''}</p>
     ${cls==='bad' ? '<div id="advice"><p class="adv">Checking which coast is better…</p></div>' : ''}
   </div>
+  ${heads}
   <section class="card"><h3>Best time ${data.label} (level ${level}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()})</h3>
     <div class="tl" role="img" aria-label="Hourly suitability today. Outlined bars mark the best two-hour window.">${bars}</div>
     <div class="ticks" aria-hidden="true">${ticks}</div>
-    <p class="legend">✓ good &nbsp; ~ marginal &nbsp; ✕ not recommended &nbsp; Outlined = best window</p></section>
+    <p class="legend">✓ good &nbsp; ~ marginal &nbsp; ○ not ideal &nbsp; Outlined = best window</p></section>
   <section class="card"><h3>Conditions ${data.k ? data.label : 'now'}</h3><dl>
     <dt>Wave size</dt><dd>${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)})</dd>
     <dt>${term('Period','Seconds between wave crests. Beginners like 6 to 10.')}</dt><dd>${Math.round(ref.period)} seconds</dd>
@@ -738,7 +772,7 @@ function drawSpots(){
     : goodOnes ? `Nearby beaches, best first for level ${level}:`
     : `Nothing nearby looks good for level ${level} ${data.label}. These are the least bad. Consider another day, a bigger travel distance, or a lesson with a surf school.`;
   const cards = ranked.map(({s,r},i) => {
-    const b = Engine.band(r.total), tag = {g:'✓ Good for level '+level, o:'~ Marginal', r:'✕ Not recommended'}[b];
+    const b = Engine.band(r.total), tag = {g:'✓ Good for level '+level, o:'~ Marginal', r:'○ Not ideal'}[b];
     const shelter = r.none ? 'No suitable daylight window.' : s.facing == null ? 'Beach angle unclear, so ranked on size and wind only.' : r.e < 0.5 ? 'Sheltered from the swell, so smaller waves.' : r.e >= 0.9 ? 'Faces the swell head-on.' : 'Partly sheltered from the swell.';
     const wind = r.none ? '' : r.type==='offshore' ? ' Offshore wind keeps it clean.' : r.type==='onshore' ? ' Onshore wind makes it choppy.' : ' Wind blows along the beach.';
     const big = !r.none && r.h > CONFIG.levels[level-1].maxH ? ' ⚠ Bigger than level '+level+' should handle.' : '';
@@ -757,7 +791,7 @@ function drawSpots(){
   L.circleMarker([center.lat, center.lon], {radius:7, color:'#fff', weight:2, fillColor:'#0c2a31', fillOpacity:1}).addTo(map).bindTooltip('You searched here');
   const markers = all.map(({s,r},i) => { const b = Engine.band(r.total);
     return L.marker([s.lat, s.lon], {icon:L.divIcon({className:'', iconSize:[96,24], iconAnchor:[48,12],
-      html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'✕'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`}), zIndexOffset:1000-i}).addTo(map)
+      html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'○'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`}), zIndexOffset:1000-i}).addTo(map)
       .bindPopup(`<b>${esc(s.name)}</b><br>${r.none ? '' : roughFt(r.h)+' waves · '+Math.round(r.period)+'s swell<br>'}About ${s.min} min drive`); });
   map.fitBounds(L.latLngBounds([[center.lat, center.lon], ...all.map(x => [x.s.lat, x.s.lon])]).pad(0.15));
   box.querySelectorAll('.spot[data-i]').forEach(el => el.addEventListener('click', () => {
