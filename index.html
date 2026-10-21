@@ -82,6 +82,11 @@ button.link{min-height:0;border:0;background:none;color:var(--teal);text-decorat
 .pin{padding:0 8px;white-space:nowrap}
 .pin{height:24px;border-radius:12px;font-size:.72rem}
 h1 small{font-family:system-ui,sans-serif;font-size:.7rem;font-weight:400;color:var(--mute);margin-left:6px}
+.wl{font-size:.85rem;color:var(--mute);margin:0 0 4px}
+.whens{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 14px}
+.whens button{padding:0 2px;font-size:.78rem}
+.whens button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tl .off{opacity:.35}
 </style>
 </head>
 <body>
@@ -101,6 +106,8 @@ h1 small{font-family:system-ui,sans-serif;font-size:.7rem;font-weight:400;color:
 
 <div class="levels" id="levels" role="group" aria-label="Your surf level"></div>
 <p class="lvname" id="lvname"></p>
+<p class="wl">Time of day</p>
+<div class="whens" id="when" role="group" aria-label="Time of day"></div>
 <button type="button" id="qbtn">Not sure of your level? Take the 1-minute quiz</button>
 <div id="quiz" aria-live="polite"></div>
 
@@ -128,7 +135,8 @@ const CONFIG = {
   goodAt: 62, okAt: 40,
   drivePenaltyPerMin: 0.25,    // spot ranking: each drive minute costs this many score points
   exposure: {fullWithin: 45, shelteredFrom: 110, minShare: 0.15},  // swell angle vs beach facing
-  spots: {probeKm: 1.2, max: 30}  // beach search: how far from each beach we look for sea to work out its angle, most beaches kept (the travel distance is set by the user)
+  spots: {probeKm: 1.2, max: 48},
+  times: {any:['Any time',0,24], morning:['Morning',0,11], midday:['Midday',11,15], afternoon:['Afternoon',15,24]}  // time-of-day choices: label, from hour, to hour  // beach search: how far from each beach we look for sea to work out its angle, most beaches kept (the travel distance is set by the user)
 };
 const Engine = {
   angleDiff(a,b){ return Math.abs(((a-b+540)%360)-180); },
@@ -230,7 +238,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.6 · 21 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.7 · 21 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null;
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -248,7 +256,7 @@ $('levels').addEventListener('click', e=>{
 
 function bestFor(L){
   const sc = data.rows.map(r => r.past ? null : Engine.score(r, L));
-  const b = Engine.bestWindow(sc.map(s => s && !s.night ? s.total : null));   // daylight hours only
+  const b = Engine.bestWindow(sc.map((s,k) => s && !s.night && inWhen(data.rows[k]) ? s.total : null));   // daylight hours in the chosen part of the day
   return {sc, b};
 }
 const fmtH = h => (h/0.3048).toFixed(1).replace('.0','') + ' ft';
@@ -267,7 +275,7 @@ function render(){
   const i = mine.b.i, win = i>=0 ? rows.slice(i, i+2) : [];
   const mAvg = Math.round(mine.b.avg);
   const myBand = Engine.band(mAvg);
-  const forYou = i<0 ? 'No safe window left today.' :
+  const forYou = i<0 ? (when === 'any' ? 'No safe window left '+data.label+'.' : 'Nothing suitable in that part of the day.') :
     myBand==='g' ? `For your level: go. Best window ${hr(win[0].hour)} to ${hr(win[1].hour+1)}.` :
     myBand==='o' ? `For your level: marginal. If you go, aim for ${hr(win[0].hour)} to ${hr(win[1].hour+1)} and stay close to shore.` :
     'For your level: not recommended. A lesson with a surf school is the safe way to go.';
@@ -284,7 +292,7 @@ function render(){
     const s = r.past ? null : Engine.score(r, level);
     const b = s ? Engine.band(s.total) : 'n';
     const mark = {g:'✓', o:'~', r:'✕', n:''}[b];
-    const best = win.some(w => w.t === r.t) ? ' best' : '';
+    const best = (win.some(w => w.t === r.t) ? ' best' : '') + (inWhen(r) ? '' : ' off');
     const ht = s ? Math.max(18, s.total) : 14;
     return `<div class="${b}${best}" style="height:${ht}%" title="${hr(r.hour)}: ${s ? s.total+'/100' : 'past'}">${mark}</div>`;
   }).join('');
@@ -299,7 +307,7 @@ function render(){
     <ul>${reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
     <p class="cond"><b>Conditions ${data.label}:</b> ${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)}) waves · ${Math.round(ref.period)}s period · ${Math.round(ref.windMph)} mph ${s0.type} wind${sst!=null ? ' · '+Math.round(sst)+'°C water' : ''}</p>
   </div>
-  <section class="card"><h3>Best time ${data.label} (level ${level})</h3>
+  <section class="card"><h3>Best time ${data.label} (level ${level}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()})</h3>
     <div class="tl" role="img" aria-label="Hourly suitability today. Outlined bars mark the best two-hour window.">${bars}</div>
     <div class="ticks" aria-hidden="true">${ticks}</div>
     <p class="legend">✓ good &nbsp; ~ marginal &nbsp; ✕ not recommended &nbsp; Outlined = best window</p></section>
@@ -445,15 +453,19 @@ async function run(lat, lon, name){
 /* Free OpenStreetMap sources are asked at the same time (Photon, Nominatim, Overpass); whatever answers within ~10 s is merged. */
 async function beachesNear(lat, lon, radiusKm){
   const dy = radiusKm/111.2, dx = dy/Math.cos(lat*R_);
+  const ph = (la, lo, r) => getT(`https://photon.komoot.io/reverse?lat=${la}&lon=${lo}&radius=${Math.min(r,100)}&limit=50&osm_tag=natural:beach&lang=en`, 9000)
+    .then(g => g.features.filter(f => f.properties && f.properties.name).map(f => ({name:f.properties.name, lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0]})));
   const op = host => getT(host + '?data=' + encodeURIComponent(`[out:json][timeout:9];nwr["natural"="beach"]["name"](around:${radiusKm*1000},${lat},${lon});out center tags;`), 10000)
     .then(j => j.elements.filter(e => e.tags && e.tags.name && !['private','no'].includes(e.tags.access)).map(e => { const c = e.center || e; return {name:e.tags.name, lat:c.lat, lon:c.lon}; }));
+  // Photon only returns the 50 nearest, so also ask around the north, south, east and west edges to reach every coast
+  const spots = radiusKm >= 20 ? [[0,0,1],[1,0,.6],[-1,0,.6],[0,1,.6],[0,-1,.6]] : [[0,0,1]];
   const jobs = [
-    getT(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&radius=${Math.min(radiusKm,100)}&limit=50&osm_tag=natural:beach&lang=en`, 9000)
-      .then(g => g.features.filter(f => f.properties && f.properties.name).map(f => ({name:f.properties.name, lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0]}))),
+    ...spots.map(([a,b,f]) => ph(lat + a*dy*.55, lon + b*dx*.55, radiusKm*f)),
     getT(`https://nominatim.openstreetmap.org/search?q=beach&format=jsonv2&limit=40&bounded=1&viewbox=${lon-dx},${lat+dy},${lon+dx},${lat-dy}`, 9000)
       .then(a => a.filter(p => p.type === 'beach' && p.name).map(p => ({name:p.name, lat:+p.lat, lon:+p.lon}))),
     op('https://overpass-api.de/api/interpreter'),
-    op('https://overpass.kumi.systems/api/interpreter')
+    op('https://overpass.kumi.systems/api/interpreter'),
+    op('https://overpass.private.coffee/api/interpreter')
   ];
   const res = await Promise.allSettled(jobs), ok = res.filter(r => r.status === 'fulfilled');
   if (!ok.length) throw new Error('the free map servers did not answer');
@@ -461,29 +473,48 @@ async function beachesNear(lat, lon, radiusKm){
   ok.flatMap(r => r.value).forEach(b => { if (b.lat == null || b.lon == null) return;
     const km = hav(lat,lon,b.lat,b.lon); if (km > radiusKm*1.1) return;
     if (!seen.has(b.name) || seen.get(b.name).km > km) seen.set(b.name, {...b, km}); });
-  return [...seen.values()].sort((a,b) => a.km-b.km).slice(0, CONFIG.spots.max);
+  return pickDiverse([...seen.values()].sort((a,b) => a.km-b.km), lat, lon, CONFIG.spots.max);
 }
 
-/* Beach angle: probe a ring of points around each beach with the Open-Meteo elevation API (sea = 0 m), then face the way the sea is. */
+/* Too many beaches to check? Take them round-robin from 8 compass sectors, nearest first in each, so no coast gets left out. */
+function pickDiverse(list, lat, lon, max){
+  if (list.length <= max) return list;
+  const sec = Array.from({length:8}, () => []);
+  list.forEach(b => sec[Math.floor(((bearing(lat,lon,b.lat,b.lon) + 22.5) % 360) / 45)].push(b));
+  const out = [];
+  for (let k=0; out.length < max; k++){
+    let any = false;
+    sec.forEach(a => { if (a[k] && out.length < max){ out.push(a[k]); any = true; } });
+    if (!any) break;
+  }
+  return out.sort((a,b) => a.km-b.km);
+}
+
+/* Beach angle: probe 8 points around each beach with the Open-Meteo elevation API (sea = 0 m), then face the way the sea is.
+   Angles never change, so each result is remembered on this device and a beach is only probed once. */
 async function addFacing(list){
-  const N = 12, D = CONFIG.spots.probeKm, pts = [];
-  list.forEach(s => { for (let k=0; k<N; k++){ const t = k*360/N*R_;
-    pts.push([s.lat + D/111.2*Math.cos(t), s.lon + D/(111.2*Math.cos(s.lat*R_))*Math.sin(t)]); } });
-  const chunks = []; for (let i=0; i<pts.length; i+=96) chunks.push(pts.slice(i, i+96));   // up to 100 points per request
-  const parts = await Promise.all(chunks.map(c => getT(`https://api.open-meteo.com/v1/elevation?latitude=${c.map(p=>p[0].toFixed(5)).join(',')}&longitude=${c.map(p=>p[1].toFixed(5)).join(',')}`, 10000)));
-  const el = parts.flatMap(d => d.elevation);
-  return list.filter((s,i) => {
-    let x = 0, y = 0, n = 0;
-    for (let k=0; k<N; k++){ const v = el[i*N+k];
-      if (v == null || v <= 0){ const t = k*360/N*R_; x += Math.sin(t); y += Math.cos(t); n++; } }
-    if (n === 0) return false;   // no sea within reach: a lake, river or inland spot
-    s.facing = n < N && Math.hypot(x,y)/n > 0.4 ? (Math.atan2(x,y)/R_ + 360) % 360 : null;   // null = angle unclear
-    return true;
-  });
+  let fc = {}; try { fc = JSON.parse(localStorage.getItem('sb-face') || '{}'); } catch(e){}
+  const key = s => s.lat.toFixed(4) + ',' + s.lon.toFixed(4), todo = list.filter(s => !(key(s) in fc));
+  if (todo.length){
+    const N = 8, D = CONFIG.spots.probeKm, pts = [];
+    todo.forEach(s => { for (let k=0; k<N; k++){ const t = k*360/N*R_;
+      pts.push([s.lat + D/111.2*Math.cos(t), s.lon + D/(111.2*Math.cos(s.lat*R_))*Math.sin(t)]); } });
+    const chunks = []; for (let i=0; i<pts.length; i+=96) chunks.push(pts.slice(i, i+96));   // up to 100 points per request
+    const parts = await Promise.all(chunks.map(c => getT(`https://api.open-meteo.com/v1/elevation?latitude=${c.map(p=>p[0].toFixed(5)).join(',')}&longitude=${c.map(p=>p[1].toFixed(5)).join(',')}`, 10000)));
+    const el = parts.flatMap(d => d.elevation);
+    todo.forEach((s,i) => {
+      let x = 0, y = 0, n = 0;
+      for (let k=0; k<N; k++){ const v = el[i*N+k];
+        if (v == null || v <= 0){ const t = k*360/N*R_; x += Math.sin(t); y += Math.cos(t); n++; } }
+      fc[key(s)] = n === 0 ? 'x' : (n < N && Math.hypot(x,y)/n > 0.4 ? (Math.atan2(x,y)/R_ + 360) % 360 : null);   // 'x' = no sea nearby (lake, inland); null = angle unclear
+    });
+    try { localStorage.setItem('sb-face', JSON.stringify(fc)); } catch(e){}
+  }
+  return list.filter(s => { const v = fc[key(s)]; if (v === 'x') return false; s.facing = v; return true; });
 }
 
 async function findSpots(lat, lon){
-  const rk = Math.round(reachKm()), ck = 'sb-spots4:' + lat.toFixed(2) + ',' + lon.toFixed(2) + ',' + rk;
+  const rk = Math.round(reachKm()), ck = 'sb-spots5:' + lat.toFixed(2) + ',' + lon.toFixed(2) + ',' + rk;
   try { const c = JSON.parse(localStorage.getItem(ck) || 'null'); if (c && Date.now() - c.t < 864e5) return c.list; } catch(e){}
   let list = await beachesNear(lat, lon, rk);
   try { list = await addFacing(list); } catch(e){ list.forEach(s => s.facing = null); }   // service down: rank without angles
@@ -506,11 +537,24 @@ function scoreSpot(s, L){
   const f = s.facing, ex = r => f == null ? 1 : Engine.exposure(r.waveFrom, f);   // no angle: full swell, wind judged against the swell
   const sc = data.rows.map(r => (r.past || r.h == null) ? null :
     Engine.score({...r, h: r.h * ex(r), waveFrom: f ?? r.waveFrom}, L));
-  const b = Engine.bestWindow(sc.map(x => x && !x.night ? x.total : null));   // daylight hours only
+  const b = Engine.bestWindow(sc.map((x,k) => x && !x.night && inWhen(data.rows[k]) ? x.total : null));   // daylight hours in the chosen part of the day
   if (b.i < 0) return {total:0, none:true};
   const r = data.rows[b.i], e = ex(r);
   return {total:Math.round(b.avg), win:[r, data.rows[b.i+1]], h:r.h*e, period:r.period, e, type:sc[b.i].type, wind:r.windMph};
 }
+
+/* ===== Time of day ===== */
+let when = 'any';
+try { const w = localStorage.getItem('sb-when'); if (w && CONFIG.times[w]) when = w; } catch(e){}
+const inWhen = r => r.hour >= CONFIG.times[when][1] && r.hour < CONFIG.times[when][2];
+function drawWhens(){
+  $('when').innerHTML = Object.entries(CONFIG.times).map(([k,v]) => `<button type="button" aria-pressed="${k===when}" data-w="${k}">${v[0]}</button>`).join('');
+}
+$('when').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  when = b.dataset.w; try { localStorage.setItem('sb-when', when); } catch(e){}
+  drawWhens(); if (data) render();
+});
 
 /* ===== How far are you willing to travel? (miles, km or minutes of driving) ===== */
 let reach = {n:25, unit:'mi'}, showN = 10, spotRun = 0;
@@ -645,7 +689,7 @@ function quizResult(){
 }
 function startQuiz(){ qi = 0; ans = []; quizStep(); }
 $('qbtn').addEventListener('click', startQuiz);
-drawLevels();
+drawLevels(); drawWhens();
 </script>
 </body>
 </html>
