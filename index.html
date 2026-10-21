@@ -6,6 +6,8 @@
 <title>Shorebreak – Today's surf verdict for beginners</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
 <style>
 :root{--bg:#eef5f4;--card:#fff;--ink:#0c2a31;--mute:#44606a;--line:#c5d8d8;--teal:#0f6b75;--good:#17653f;--goodbg:#dcf3e5;--ok:#7a4d00;--okbg:#fdf0cf;--bad:#a3201a;--badbg:#fbe0dd}
 @media (prefers-color-scheme:dark){:root{--bg:#07181d;--card:#0e2830;--ink:#e8f4f3;--mute:#9db9bd;--line:#23444d;--teal:#6fd0d9;--good:#7be0a6;--goodbg:#10382a;--ok:#f2c35b;--okbg:#3a2d0b;--bad:#ff9a92;--badbg:#431b19}}
@@ -49,7 +51,7 @@ abbr[title]{text-decoration:underline dotted;cursor:help}
 .skel{height:150px;border-radius:20px;background:linear-gradient(90deg,var(--line),var(--card),var(--line));background-size:200% 100%;animation:s 1.4s infinite}
 .pl{display:block;margin:12px 0 0;font-size:.85rem;color:var(--mute)}
 select{display:block;width:100%;font:inherit;min-height:48px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);padding:0 12px;margin-top:4px}
-#map{height:320px;border-radius:14px;border:1px solid var(--line);margin:10px 0;z-index:0}
+#map{height:380px;border-radius:14px;border:1px solid var(--line);margin:10px 0;z-index:0}
 .pin{display:flex;align-items:center;justify-content:center;height:28px;border-radius:14px;color:#fff;font-weight:700;font-size:.8rem;border:2px solid #fff;box-shadow:0 1px 4px #0006}
 .pin.g{background:#17653f}.pin.o{background:#7a4d00}.pin.r{background:#a3201a}
 .spot{display:block;width:100%;text-align:left;font-weight:400;padding:12px 14px;margin:8px 0;min-height:48px;line-height:1.4}
@@ -103,7 +105,6 @@ button:disabled{opacity:.5;cursor:default}
 .days .calm{color:var(--mute);font-weight:600}
 .days .wk p{margin:6px 0 0;font-size:.9rem;color:var(--ink)}
 .days button.link{min-height:40px;padding:8px 2px 0;font-size:.85rem}
-@media (prefers-color-scheme:dark){.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.95) contrast(.9)}}
 abbr[data-def]{cursor:pointer}
 #tip{position:fixed;left:12px;right:12px;bottom:12px;max-width:616px;margin:0 auto;background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:12px;font-size:.9rem;z-index:2000;box-shadow:0 4px 18px #0006}
 .heads{margin:0;padding-left:1.1em}.heads li{margin:6px 0}
@@ -134,7 +135,7 @@ abbr[data-def]{cursor:pointer}
 <div id="out" aria-live="polite"></div>
 <section class="card" id="spots" hidden></section>
 
-<p class="note">Forecasts are estimates. The main verdict judges wind against the swell direction; the nearby beaches use their own angles, estimated from the coastline. Always check with local lifeguards and signage before you paddle out.<br>Data: Open-Meteo (marine and weather), OpenStreetMap contributors (map and beaches, via Photon and Overpass), Copernicus DEM via Open-Meteo (beach angles), OSRM (drive times), Leaflet (map).</p>
+<p class="note">Forecasts are estimates. The main verdict judges wind against the swell direction; the nearby beaches use their own angles, estimated from the coastline. Always check with local lifeguards and signage before you paddle out.<br>Data: Open-Meteo (marine and weather), OpenStreetMap contributors (map and beaches, via Photon and Overpass), Copernicus DEM via Open-Meteo (beach angles), OSRM (drive times), Leaflet and Leaflet.markercluster (map), CARTO (map tiles).</p>
 </main>
 
 <script>
@@ -291,7 +292,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.13 · 21 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.14 · 21 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -381,7 +382,7 @@ function render(){
   const forYou = i<0 ? (when === 'any' ? (data.k ? 'No suitable window '+data.label+'.' : 'No safe window left today.') : 'Nothing suitable in that part of the day.') :
     myBand==='g' ? `For your level: go. Best window ${hr(win[0].hour)} to ${hr(win[1].hour+1)}.` :
     myBand==='o' ? `For your level: marginal. If you go, aim for ${hr(win[0].hour)} to ${hr(win[1].hour+1)} and stay close to shore.` :
-    'Conditions here don’t suit your level today.';
+    'Conditions here don’t suit your level '+data.label+'.';
   const ref = win[0] || usable[0], s0 = Engine.score({...ref, daylight:true}, level) || {type:'cross'};
   const reasons = [];
   reasons.push(`Waves are ${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)}). ${ref.h > CONFIG.levels[level-1].maxH ? 'That is bigger than level '+level+' should handle.' : ref.h < CONFIG.levels[level-1].idealMin ? 'Small, so expect a slow, mellow session.' : 'A comfortable size for level '+level+'.'}`);
@@ -769,7 +770,7 @@ function drawSpots(){
   const ranked = all.slice(0, showN);
   const goodOnes = ranked.filter(x => x.r.total >= CONFIG.okAt).length;
   const title = here >= CONFIG.goodAt ? 'Other beaches nearby' : 'Better places nearby';
-  const intro = here < CONFIG.okAt && goodOnes ? `Not great here for level ${level}, but these nearby beaches should be better:`
+  const intro = here < CONFIG.okAt && goodOnes ? `Not ideal here for level ${level}, but these nearby beaches should be better:`
     : goodOnes ? `Nearby beaches, best first for level ${level}:`
     : `Nothing nearby looks good for level ${level} ${data.label}. These are the least bad. Consider another day, a bigger travel distance, or a lesson with a surf school.`;
   const cards = ranked.map(({s,r},i) => {
@@ -784,19 +785,25 @@ function drawSpots(){
   }).join('');
   const more = all.length > showN ? `<button type="button" class="spot" id="more">Show more beaches (${all.length-showN} more)</button>` : '';
   box.innerHTML = head + `<h3>${title}</h3><p>${intro}</p><p class="legend">${data.k===0 ? 'Today' : data.k===1 ? 'Tomorrow' : dayName(data.date, true)}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()}. Showing ${ranked.length} of ${all.length} beaches within ${reach.n} ${unitLbl[reach.unit]}. The map shows all of them.</p><div id="map" role="region" aria-label="Map of nearby beaches"></div>${cards}${more}
-    <p class="legend">Wave heights are rough estimates for each beach, worked out from its angle. Beach angles are estimated, so local knowledge matters. Ask a lifeguard or surf school.</p>`;
+    <p class="legend">On the map, a group takes the colour of its best beach. Tap it to zoom in. Wave heights are rough estimates for each beach, worked out from its angle. Beach angles are estimated, so local knowledge matters. Ask a lifeguard or surf school.</p>`;
   bindReach(); const mb = $('more'); if (mb) mb.onclick = () => { showN += 10; drawSpots(); };
   if (typeof L === 'undefined'){ $('map').outerHTML = '<p class="legend">Map couldn’t load (check your connection).</p>'; return; }
   map = L.map('map', {scrollWheelZoom:false});
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18, attribution:'© OpenStreetMap contributors'}).addTo(map);
+  const tl = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {subdomains:'abcd', maxZoom:19, attribution:'© OpenStreetMap contributors © CARTO'}).addTo(map);
+  tl.once('tileerror', () => { map.removeLayer(tl); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18, attribution:'© OpenStreetMap contributors'}).addTo(map); });   // fall back to plain OpenStreetMap tiles
   L.circleMarker([center.lat, center.lon], {radius:7, color:'#fff', weight:2, fillColor:'#0c2a31', fillOpacity:1}).addTo(map).bindTooltip('You searched here');
   const markers = all.map(({s,r},i) => { const b = Engine.band(r.total);
-    return L.marker([s.lat, s.lon], {icon:L.divIcon({className:'', iconSize:[96,24], iconAnchor:[48,12],
-      html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'✕'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`}), zIndexOffset:1000-i}).addTo(map)
+    return L.marker([s.lat, s.lon], {band:b, icon:L.divIcon({className:'', iconSize:[96,24], iconAnchor:[48,12],
+      html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'✕'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`}), zIndexOffset:1000-i})
       .bindPopup(`<b>${esc(s.name)}</b><br>${r.none ? '' : roughFt(r.h)+' waves · '+Math.round(r.period)+'s swell<br>'}About ${s.min} min drive`); });
+  const group = L.markerClusterGroup ? L.markerClusterGroup({maxClusterRadius:45, showCoverageOnHover:false, iconCreateFunction:c => {   // a group takes the colour of its best beach
+    const ms = c.getAllChildMarkers(), b = ms.some(m => m.options.band==='g') ? 'g' : ms.some(m => m.options.band==='o') ? 'o' : 'r';
+    return L.divIcon({className:'', iconSize:[84,24], iconAnchor:[42,12], html:`<div class="pin ${b}">${ms.length} beaches</div>`}); }}) : L.layerGroup();
+  markers.forEach(m => group.addLayer(m)); group.addTo(map);
   map.fitBounds(L.latLngBounds([[center.lat, center.lon], ...all.map(x => [x.s.lat, x.s.lon])]).pad(0.15));
   box.querySelectorAll('.spot[data-i]').forEach(el => el.addEventListener('click', () => {
-    const m = markers[+el.dataset.i]; map.setView(m.getLatLng(), 14); m.openPopup(); $('map').scrollIntoView({block:'center'});
+    const m = markers[+el.dataset.i]; $('map').scrollIntoView({block:'center'});
+    if (group.zoomToShowLayer) group.zoomToShowLayer(m, () => m.openPopup()); else { map.setView(m.getLatLng(), 14); m.openPopup(); }
   }));
 }
 
