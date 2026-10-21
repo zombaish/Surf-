@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shorebreak – Today's surf verdict for beginners</title>
+<style>
+:root{--bg:#eef5f4;--card:#fff;--ink:#0c2a31;--mute:#44606a;--line:#c5d8d8;--teal:#0f6b75;--good:#17653f;--goodbg:#dcf3e5;--ok:#7a4d00;--okbg:#fdf0cf;--bad:#a3201a;--badbg:#fbe0dd}
+@media (prefers-color-scheme:dark){:root{--bg:#07181d;--card:#0e2830;--ink:#e8f4f3;--mute:#9db9bd;--line:#23444d;--teal:#6fd0d9;--good:#7be0a6;--goodbg:#10382a;--ok:#f2c35b;--okbg:#3a2d0b;--bad:#ff9a92;--badbg:#431b19}}
+*{box-sizing:border-box}
+html{font-size:18px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Avenir Next","Segoe UI",system-ui,sans-serif;line-height:1.5}
+main{max-width:640px;margin:0 auto;padding:16px 16px 56px}
+h1{font-family:"Iowan Old Style",Georgia,serif;font-size:1.7rem;margin:8px 0 2px;letter-spacing:-.01em}
+.sub{color:var(--mute);margin:0 0 16px;font-size:.9rem}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+input,button{font:inherit;min-height:48px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);padding:0 14px}
+input{flex:1;min-width:180px}
+button{cursor:pointer;font-weight:600}
+button.go{background:var(--teal);border-color:var(--teal);color:var(--bg)}
+:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+.levels{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:14px 0 4px}
+.levels button{padding:0;font-size:1.05rem}
+.levels button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.lvname{font-size:.85rem;color:var(--mute);margin:0 0 16px;min-height:1.3em}
+.verdict{border-radius:20px;padding:22px 20px;margin:8px 0 14px;border:2px solid}
+.verdict.good{background:var(--goodbg);color:var(--good);border-color:var(--good)}
+.verdict.ok{background:var(--okbg);color:var(--ok);border-color:var(--ok)}
+.verdict.bad{background:var(--badbg);color:var(--bad);border-color:var(--bad)}
+.verdict h2{font-family:"Iowan Old Style",Georgia,serif;font-size:1.9rem;line-height:1.15;margin:0 0 4px}
+.verdict .for{font-weight:700;margin:0 0 10px}
+.verdict ul{margin:0;padding-left:1.1em;color:var(--ink)}
+.verdict li{margin:4px 0}
+section.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:14px 0}
+h3{margin:0 0 10px;font-size:1rem}
+.tl{display:flex;gap:3px;align-items:flex-end;height:96px;margin:6px 0 4px}
+.tl div{flex:1;border-radius:6px 6px 0 0;min-width:0;position:relative;display:flex;align-items:flex-start;justify-content:center;font-size:.7rem;font-weight:700;color:var(--bg);padding-top:2px}
+.tl .g{background:var(--good)}.tl .o{background:var(--ok)}.tl .r{background:var(--bad)}.tl .n{background:var(--line);color:var(--mute)}
+.tl .best{outline:3px solid var(--ink);outline-offset:1px}
+.ticks{display:flex;gap:3px;font-size:.65rem;color:var(--mute)}.ticks span{flex:1;text-align:center;overflow:hidden}
+.legend{font-size:.8rem;color:var(--mute);margin:8px 0 0}
+dl{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;margin:0}
+dt{color:var(--mute)}dd{margin:0;font-weight:600}
+abbr[title]{text-decoration:underline dotted;cursor:help}
+.note{font-size:.8rem;color:var(--mute);margin-top:18px}
+.err{background:var(--badbg);color:var(--bad);border-radius:12px;padding:12px 14px;margin:12px 0}
+.skel{height:150px;border-radius:20px;background:linear-gradient(90deg,var(--line),var(--card),var(--line));background-size:200% 100%;animation:s 1.4s infinite}
+.qs{border:0;padding:0;margin:0 0 8px}
+.qs legend{font-weight:700;margin-bottom:6px;padding:0}
+.qs label{display:flex;gap:12px;align-items:center;min-height:48px;padding:6px 12px;border:2px solid var(--line);border-radius:12px;margin:8px 0;cursor:pointer}
+.qs label:has(input:checked){border-color:var(--teal);background:var(--bg)}
+.qs input{flex:none;min-width:0;min-height:0;width:22px;height:22px;padding:0;accent-color:var(--teal)}
+#qbtn{margin:0 0 14px;width:100%}
+.res h3{font-family:"Iowan Old Style",Georgia,serif;font-size:1.4rem}
+.res ul{padding-left:1.1em;margin:8px 0 14px}
+@keyframes s{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.skel{animation:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>Shorebreak</h1>
+<p class="sub">Is the surf right for you today? Plain-English answers from free marine forecast data.</p>
+
+<form class="row" id="f" role="search">
+  <input id="q" type="search" placeholder="Beach or town, e.g. Newquay" aria-label="Search for a beach or town" autocomplete="off">
+  <button class="go" type="submit">Check surf</button>
+  <button type="button" id="geo">Use my location</button>
+</form>
+
+<div class="levels" id="levels" role="group" aria-label="Your surf level"></div>
+<p class="lvname" id="lvname"></p>
+<button type="button" id="qbtn">Not sure of your level? Take the 1-minute quiz</button>
+<div id="quiz" aria-live="polite"></div>
+
+<div id="out" aria-live="polite"></div>
+
+<p class="note">Forecasts are estimates. Wind direction is judged against the swell direction because exact beach angles aren't known yet. Always check with local lifeguards and signage before you paddle out.<br>Data: Open-Meteo (Marine and Weather APIs).</p>
+</main>
+
+<script>
+/* ========= Scoring engine: pure functions, all tunable numbers live in CONFIG ========= */
+const CONFIG = {
+  levels: [
+    {name:'Foam-board basics', maxH:0.5, idealMin:0.2, maxWind:10},
+    {name:'Whitewater riding', maxH:0.8, idealMin:0.3, maxWind:12},
+    {name:'Green waves',       maxH:1.1, idealMin:0.4, maxWind:15},
+    {name:'Lineup surfing',    maxH:1.5, idealMin:0.5, maxWind:18},
+    {name:'Intermediate',      maxH:2.0, idealMin:0.6, maxWind:22}
+  ],
+  weights: {size:0.5, wind:0.3, period:0.2},
+  windBase: {offshore:100, cross:65, onshore:35},
+  windPenaltyPerMph: 5,
+  periodIdeal: [6, 10],        // seconds, comfortable for beginners
+  periodLongPenaltyPerSec: [10, 8, 6, 4, 2], // per level, beyond ideal max
+  goodAt: 62, okAt: 40
+};
+const Engine = {
+  angleDiff(a,b){ return Math.abs(((a-b+540)%360)-180); },
+  windType(windFrom, waveFrom){            // 180 apart = wind blowing out to sea
+    const d = this.angleDiff(windFrom, waveFrom);
+    return d > 120 ? 'offshore' : d < 60 ? 'onshore' : 'cross';
+  },
+  sizeScore(h, L){
+    const c = CONFIG.levels[L-1];
+    if (h < c.idealMin) return Math.max(0, 100 * h / c.idealMin);
+    if (h <= c.maxH) return 100;
+    return Math.max(0, 100 - 100 * (h - c.maxH) / (c.maxH * 0.5));
+  },
+  windScore(speed, type, L){
+    const c = CONFIG.levels[L-1];
+    let s = CONFIG.windBase[type];
+    if (speed > c.maxWind) s -= (speed - c.maxWind) * CONFIG.windPenaltyPerMph;
+    if (type === 'onshore') s -= speed * 1.5;
+    return Math.max(0, Math.min(100, s));
+  },
+  periodScore(p, L){
+    const [lo, hi] = CONFIG.periodIdeal;
+    if (p < lo) return Math.max(0, 100 - (lo - p) * 20);
+    if (p <= hi) return 100;
+    return Math.max(0, 100 - (p - hi) * CONFIG.periodLongPenaltyPerSec[L-1]);
+  },
+  score(x, L){        // x: {h, period, windMph, windFrom, waveFrom, daylight}
+    if (x.h == null || x.windMph == null) return null;
+    const type = this.windType(x.windFrom, x.waveFrom ?? x.windFrom + 180);
+    const w = CONFIG.weights;
+    const parts = {size:this.sizeScore(x.h,L), wind:this.windScore(x.windMph,type,L), period:this.periodScore(x.period ?? 8,L)};
+    let total = parts.size*w.size + parts.wind*w.wind + parts.period*w.period;
+    if (x.h > CONFIG.levels[L-1].maxH * 1.3) total = Math.min(total, 25);   // too big: cap hard
+    if (!x.daylight) total = 0;
+    return {total:Math.round(total), type, parts};
+  },
+  band(t){ return t >= CONFIG.goodAt ? 'g' : t >= CONFIG.okAt ? 'o' : 'r'; },
+  bestWindow(scores, len=2){   // scores: array of numbers (null = no data)
+    let best = {i:-1, avg:-1};
+    for (let i=0; i+len<=scores.length; i++){
+      const s = scores.slice(i,i+len);
+      if (s.some(v => v == null)) continue;
+      const avg = s.reduce((a,b)=>a+b,0)/len;
+      if (avg > best.avg) best = {i, avg};
+    }
+    return best;
+  },
+  bodyHeight(h){
+    return h<0.3?'ankle-high':h<0.5?'knee-high':h<0.8?'waist-high':h<1.1?'chest-high':h<1.5?'head-high':'overhead';
+  },
+  wetsuit(c){
+    return c>=22?'boardshorts or a rash guard':c>=17?'a 3/2 wetsuit':c>=12?'a 4/3 wetsuit with boots':'a 5/4 wetsuit with boots, gloves and a hood';
+  },
+  selfTest(){
+    const a=(c,m)=>console.assert(c,'FAIL: '+m);
+    a(this.windType(270,90)==='offshore','offshore');
+    a(this.windType(90,90)==='onshore','onshore');
+    a(this.sizeScore(0.4,1)===100,'size ideal');
+    a(this.sizeScore(1.2,1)===0,'size too big for L1');
+    a(this.score({h:0.4,period:8,windMph:5,windFrom:270,waveFrom:90,daylight:false},1).total===0,'night = 0');
+    console.log('Engine self-test done');
+  }
+};
+if (location.search.includes('test')) Engine.selfTest();
+
+/* ========= Data layer ========= */
+const get = async u => { const r = await fetch(u); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); };
+async function loadForecast(lat, lon){
+  const m = get(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=wave_height,wave_period,wave_direction,sea_surface_temperature&timezone=auto&forecast_days=2`);
+  const w = get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=wind_speed_10m,wind_direction_10m&daily=sunrise,sunset&wind_speed_unit=mph&timezone=auto&forecast_days=2`);
+  const [marine, wx] = await Promise.all([m, w]);
+  const off = wx.utc_offset_seconds || 0;
+  const now = new Date(Date.now() + off*1000).toISOString().slice(0,16);
+  const today = now.slice(0,10), rise = wx.daily.sunrise[0], set = wx.daily.sunset[0];
+  const rows = [];
+  marine.hourly.time.forEach((t,i)=>{
+    if (!t.startsWith(today)) return;
+    const j = wx.hourly.time.indexOf(t);
+    rows.push({t, hour:+t.slice(11,13), h:marine.hourly.wave_height[i], period:marine.hourly.wave_period[i],
+      waveFrom:marine.hourly.wave_direction[i], sst:marine.hourly.sea_surface_temperature[i],
+      windMph:wx.hourly.wind_speed_10m[j], windFrom:wx.hourly.wind_direction_10m[j],
+      daylight: t >= rise.slice(0,13)+':00' && t <= set, past: t.slice(0,13) < now.slice(0,13)});
+  });
+  return {rows, rise, set};
+}
+
+/* ========= UI ========= */
+const $ = id => document.getElementById(id);
+let level = 1, place = null, data = null;
+try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
+
+function drawLevels(){
+  $('levels').innerHTML = [1,2,3,4,5].map(n=>`<button type="button" aria-pressed="${n===level}" aria-label="Level ${n}: ${CONFIG.levels[n-1].name}" data-l="${n}">${n}</button>`).join('');
+  $('lvname').textContent = `Level ${level}: ${CONFIG.levels[level-1].name}`;
+}
+$('levels').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  level = +b.dataset.l;
+  try { localStorage.setItem('sb-level', level); } catch(e){}
+  drawLevels(); if (data) render();
+});
+
+function bestFor(L){
+  const sc = data.rows.map(r => r.past ? null : Engine.score(r, L));
+  const b = Engine.bestWindow(sc.map(s => s && s.total));
+  return {sc, b};
+}
+const fmtH = h => (h/0.3048).toFixed(1).replace('.0','') + ' ft';
+const hr = h => { const x = h%12||12; return x + (h<12?'am':'pm'); };
+const term = (t, def) => `<abbr title="${def}" tabindex="0">${t}</abbr>`;
+
+function render(){
+  const {rows} = data;
+  const usable = rows.filter(r => !r.past && r.h != null);
+  if (!usable.length) { $('out').innerHTML = `<div class="err">No marine data for this spot. Try a beach or coastal town.</div>`; return; }
+  const mine = bestFor(level), l1 = bestFor(1), l3 = bestFor(3);
+  let cls, title;
+  if (l1.b.avg >= CONFIG.goodAt){ cls='good'; title='Good for beginners'; }
+  else if (l3.b.avg >= CONFIG.goodAt){ cls='ok'; title="Okay if you're level 3+"; }
+  else { cls='bad'; title='Skip today'; }
+  const i = mine.b.i, win = i>=0 ? rows.slice(i, i+2) : [];
+  const mAvg = Math.round(mine.b.avg);
+  const myBand = Engine.band(mAvg);
+  const forYou = i<0 ? 'No safe window left today.' :
+    myBand==='g' ? `For your level: go. Best window ${hr(win[0].hour)} to ${hr(win[1].hour+1)}.` :
+    myBand==='o' ? `For your level: marginal. If you go, aim for ${hr(win[0].hour)} to ${hr(win[1].hour+1)} and stay close to shore.` :
+    'For your level: skip it, or take a lesson with a school.';
+  const ref = win[0] || usable[0], s0 = Engine.score({...ref, daylight:true}, level);
+  const reasons = [];
+  reasons.push(`Waves are ${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)}). ${ref.h > CONFIG.levels[level-1].maxH ? 'That is bigger than level '+level+' should handle.' : ref.h < CONFIG.levels[level-1].idealMin ? 'Small, so expect a slow, mellow session.' : 'A comfortable size for level '+level+'.'}`);
+  reasons.push(`Wind is ${s0.type==='offshore'?'blowing off the land (clean waves)':s0.type==='onshore'?'blowing onto the beach (choppy, messy waves)':'blowing along the beach (a bit bumpy)'} at ${Math.round(ref.windMph)} mph.`);
+  if (ref.period >= 12) reasons.push(`Long ${term('swell period','Time between waves. Longer gaps mean more powerful waves.')} (${Math.round(ref.period)}s): waves will hit harder than they look.`);
+  else if (ref.period < 5) reasons.push(`Short ${term('swell period','Time between waves. Longer gaps mean more powerful waves.')} (${Math.round(ref.period)}s): expect choppy, weak waves.`);
+  if (!win.length) reasons.length = 0, reasons.push('Daylight is running out or conditions are unsuitable.');
+
+  const day = rows.filter(r => r.daylight);
+  const bars = day.map(r => {
+    const s = r.past ? null : Engine.score(r, level);
+    const b = s ? Engine.band(s.total) : 'n';
+    const mark = {g:'✓', o:'~', r:'✕', n:''}[b];
+    const best = win.some(w => w.t === r.t) ? ' best' : '';
+    const ht = s ? Math.max(18, s.total) : 14;
+    return `<div class="${b}${best}" style="height:${ht}%" title="${hr(r.hour)}: ${s ? s.total+'/100' : 'past'}">${mark}</div>`;
+  }).join('');
+  const ticks = day.map(r => `<span>${r.hour%3===0 ? hr(r.hour) : ''}</span>`).join('');
+  const sst = usable.find(r=>r.sst!=null)?.sst;
+  const t = x => x.slice(11,16);
+
+  $('out').innerHTML = `
+  <div class="verdict ${cls}" role="status">
+    <h2>${cls==='good'?'✓':cls==='ok'?'~':'✕'} ${title}</h2>
+    <p class="for">${forYou}</p>
+    <ul>${reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
+  </div>
+  <section class="card"><h3>Best time today (level ${level})</h3>
+    <div class="tl" role="img" aria-label="Hourly suitability today. Outlined bars mark the best two-hour window.">${bars}</div>
+    <div class="ticks" aria-hidden="true">${ticks}</div>
+    <p class="legend">✓ good &nbsp; ~ marginal &nbsp; ✕ skip &nbsp; Outlined = best window</p></section>
+  <section class="card"><h3>Conditions now</h3><dl>
+    <dt>Wave size</dt><dd>${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)})</dd>
+    <dt>${term('Period','Seconds between wave crests. Beginners like 6 to 10.')}</dt><dd>${Math.round(ref.period)} seconds</dd>
+    <dt>Wind</dt><dd>${Math.round(ref.windMph)} mph, ${s0.type}</dd>
+    <dt>Water</dt><dd>${sst!=null ? Math.round(sst)+'°C: wear '+Engine.wetsuit(sst) : 'not available'}</dd>
+    <dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></dl></section>`;
+}
+
+async function run(lat, lon, name){
+  $('out').innerHTML = '<div class="skel" aria-label="Loading"></div>';
+  try { data = await loadForecast(lat, lon); place = name; render(); }
+  catch(e){ data = null; $('out').innerHTML = `<div class="err">Couldn't load the forecast (${e.message}). Check your connection and try again.</div>`; }
+}
+$('f').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const q = $('q').value.trim(); if(!q) return;
+  $('out').innerHTML = '<div class="skel"></div>';
+  try {
+    const g = await get(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1`);
+    if (!g.results) { $('out').innerHTML = '<div class="err">No place found. Try a nearby town name.</div>'; return; }
+    const p = g.results[0]; run(p.latitude, p.longitude, p.name);
+  } catch(e){ $('out').innerHTML = `<div class="err">Search failed (${e.message}). Try again.</div>`; }
+});
+$('geo').addEventListener('click', ()=>{
+  if (!navigator.geolocation) { $('out').innerHTML = '<div class="err">Location isn’t available in this browser. Search for a beach instead.</div>'; return; }
+  navigator.geolocation.getCurrentPosition(p => run(p.coords.latitude, p.coords.longitude, 'your location'),
+    () => { $('out').innerHTML = '<div class="err">Location permission was denied. Search for a beach instead.</div>'; });
+});
+/* ========= Skill quiz ========= */
+const QUIZ = [
+ {id:'swim',q:'How comfortable are you swimming in the ocean?',o:[['Not very comfortable',0],['Fine in calm, shallow water',1],['Comfortable in deeper water with some waves',2],['Strong swimmer, fine in rough water',3]]},
+ {id:'times',q:'How many times have you surfed?',o:[['Never',0],['1 to 5 times',1],['6 to 20 times',2],['20 to 50 times',3],['More than 50 times',4]]},
+ {id:'pop',q:'Can you paddle and pop up on a board?',o:[['Not yet',0],['Slowly, on foam or whitewater',1],['Reliably, in about 2 seconds',2],['On green waves, and I can steer',3]]},
+ {id:'chest',q:'How do you feel in chest-high waves?',o:[['Never tried, or it scares me',0],['Nervous, I stay in the whitewater',1],['OK, but I get caught inside sometimes',2],['Comfortable, I can paddle out through them',3]]},
+ {id:'etiq',q:'Do you know lineup etiquette, like right of way and not dropping in?',o:[['No',0],['A little',1],['Yes, and I follow it every time',2]]},
+ {id:'fit',q:'How is your paddling fitness?',o:[['Low, I tire quickly',0],['Average',1],['Good, I can paddle 20 minutes without stopping',2]]},
+ {id:'age',q:'What is your age range?',o:[['Under 16',0],['16 to 39',1],['40 to 59',2],['60 or over',3]]},
+ {id:'board',q:'Which board do you own?',o:[['None, I rent',0],['Foam board',1],['Funboard or longboard',2],['Fish or shortboard',3]]}
+];
+let qi = 0, ans = [];
+const qpts = id => { const k = QUIZ.findIndex(x=>x.id===id); return QUIZ[k].o[ans[k]][1]; };
+
+function quizStep(){
+  const Q = QUIZ[qi], last = qi === QUIZ.length-1;
+  $('quiz').innerHTML = `<section class="card"><form id="qf"><fieldset class="qs"><legend>Question ${qi+1} of ${QUIZ.length}: ${Q.q}</legend>${
+    Q.o.map((o,i)=>`<label><input type="radio" name="a" value="${i}" ${ans[qi]===i?'checked':''} required> ${o[0]}</label>`).join('')}</fieldset>
+    <div class="row"><button type="button" id="qback" ${qi?'':'disabled'}>Back</button><button class="go" type="submit">${last?'See my level':'Next'}</button></div></form></section>`;
+  $('qf').addEventListener('submit', e=>{
+    e.preventDefault();
+    ans[qi] = +new FormData(e.target).get('a');
+    if (last) quizResult(); else { qi++; quizStep(); }
+  });
+  $('qback').addEventListener('click', ()=>{ qi--; quizStep(); });
+  $('quiz').querySelector('input').focus();
+}
+
+function quizResult(){
+  const skill = ['times','pop','chest','etiq'].reduce((a,id)=>a+qpts(id), 0);
+  let L = skill>=11?5 : skill>=9?4 : skill>=6?3 : skill>=3?2 : 1;
+  const why = [`Your experience, pop-up, wave comfort and etiquette answers add up to ${skill} out of 12, which points to level ${L}.`];
+  const cap = (max, msg) => { if (L > max) { L = max; why.push(msg); } };
+  const swim = qpts('swim');
+  if (swim === 0) cap(1, 'You are not yet comfortable in the ocean, so level 1 (foam board, whitewater only) is the safe start.');
+  else if (swim === 1) cap(2, 'You are comfortable only in calm shallow water, so we capped you at level 2.');
+  if (qpts('fit') === 0) cap(2, 'Paddling stamina matters for getting back in if you get tired, so we capped you at level 2.');
+  if (qpts('pop') === 0) cap(1, 'You cannot pop up yet, so start with foam-board basics.');
+  if (qpts('chest') <= 1) cap(2, 'Chest-high waves still feel like a lot, so green-wave levels would be too much for now.');
+  if (qpts('age') === 0 || qpts('age') === 3) why.push('Warm up well and rest between waves; start with shorter sessions.');
+  if (qpts('board') === 3 && L <= 2) why.push('A fish or shortboard is hard to learn on. Rent or borrow a bigger, softer board for now.');
+  why.push('When unsure, we pick the lower level. Move up with the checklists, or drop a level any time conditions feel too big.');
+  $('quiz').innerHTML = `<section class="card res"><h3>Your starting level: ${L}, ${CONFIG.levels[L-1].name}</h3>
+    <ul>${why.map(w=>`<li>${w}</li>`).join('')}</ul>
+    <div class="row"><button class="go" id="quse">Use level ${L}</button><button id="qretake">Retake quiz</button></div></section>`;
+  $('quse').addEventListener('click', ()=>{
+    level = L;
+    try { localStorage.setItem('sb-level', level); } catch(e){}
+    drawLevels(); if (data) render(); $('quiz').innerHTML = '';
+  });
+  $('qretake').addEventListener('click', startQuiz);
+}
+function startQuiz(){ qi = 0; ans = []; quizStep(); }
+$('qbtn').addEventListener('click', startQuiz);
+drawLevels();
+</script>
+</body>
+</html>
