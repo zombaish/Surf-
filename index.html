@@ -187,17 +187,20 @@ async function loadForecast(lat, lon){
   const [marine, wx] = await Promise.all([m, w]);
   const off = wx.utc_offset_seconds || 0;
   const now = new Date(Date.now() + off*1000).toISOString().slice(0,16);
-  const today = now.slice(0,10), rise = wx.daily.sunrise[0], set = wx.daily.sunset[0];
-  const rows = [];
-  marine.hourly.time.forEach((t,i)=>{
-    if (!t.startsWith(today)) return;
-    const j = wx.hourly.time.indexOf(t);
-    rows.push({t, hour:+t.slice(11,13), h:marine.hourly.wave_height[i], period:marine.hourly.wave_period[i],
-      waveFrom:marine.hourly.wave_direction[i], sst:marine.hourly.sea_surface_temperature[i],
-      windMph:wx.hourly.wind_speed_10m[j], windFrom:wx.hourly.wind_direction_10m[j],
-      daylight: t >= rise.slice(0,13)+':00' && t <= set, past: t.slice(0,13) < now.slice(0,13)});
-  });
-  return {rows, rise, set};
+  const build = k => {
+    const date = wx.daily.time[k], rise = wx.daily.sunrise[k], set = wx.daily.sunset[k], rows = [];
+    marine.hourly.time.forEach((t,i)=>{
+      if (!t.startsWith(date)) return;
+      const j = wx.hourly.time.indexOf(t);
+      rows.push({t, hour:+t.slice(11,13), h:marine.hourly.wave_height[i], period:marine.hourly.wave_period[i],
+        waveFrom:marine.hourly.wave_direction[i], sst:marine.hourly.sea_surface_temperature[i],
+        windMph:wx.hourly.wind_speed_10m[j], windFrom:wx.hourly.wind_direction_10m[j],
+        daylight: t >= rise.slice(0,13)+':00' && t <= set, past: t.slice(0,13) < now.slice(0,13)});
+    });
+    return {rows, rise, set, label: k ? 'tomorrow' : 'today'};
+  };
+  const d0 = build(0);
+  return d0.rows.some(r => r.daylight && !r.past) ? d0 : build(1);   // daylight over? show tomorrow
 }
 
 /* ========= UI ========= */
@@ -233,7 +236,7 @@ function render(){
   let cls, title;
   if (l1.b.avg >= CONFIG.goodAt){ cls='good'; title='Good for beginners'; }
   else if (l3.b.avg >= CONFIG.goodAt){ cls='ok'; title="Okay if you're level 3+"; }
-  else { cls='bad'; title='Skip today'; }
+  else { cls='bad'; title='Skip '+data.label; }
   const i = mine.b.i, win = i>=0 ? rows.slice(i, i+2) : [];
   const mAvg = Math.round(mine.b.avg);
   const myBand = Engine.band(mAvg);
@@ -268,11 +271,11 @@ function render(){
     <p class="for">${forYou}</p>
     <ul>${reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
   </div>
-  <section class="card"><h3>Best time today (level ${level})</h3>
+  <section class="card"><h3>Best time ${data.label} (level ${level})</h3>
     <div class="tl" role="img" aria-label="Hourly suitability today. Outlined bars mark the best two-hour window.">${bars}</div>
     <div class="ticks" aria-hidden="true">${ticks}</div>
     <p class="legend">✓ good &nbsp; ~ marginal &nbsp; ✕ skip &nbsp; Outlined = best window</p></section>
-  <section class="card"><h3>Conditions now</h3><dl>
+  <section class="card"><h3>Conditions ${data.label==='today'?'now':'tomorrow'}</h3><dl>
     <dt>Wave size</dt><dd>${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)})</dd>
     <dt>${term('Period','Seconds between wave crests. Beginners like 6 to 10.')}</dt><dd>${Math.round(ref.period)} seconds</dd>
     <dt>Wind</dt><dd>${Math.round(ref.windMph)} mph, ${s0.type}</dd>
@@ -304,13 +307,13 @@ $('geo').addEventListener('click', ()=>{
 });
 async function getT(u, ms){
   const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
-  try { const r = await fetch(u, {signal:c.signal}); if (!r.ok) throw new Error('HTTP '+r.status); return await r.json(); }
+  try { const r = await fetch(u, {signal:c.signal}); if (!r.ok) throw new Error(r.status === 429 ? 'the free map-data server is busy' : 'HTTP '+r.status); return await r.json(); }
   catch(e){ throw e.name === 'AbortError' ? new Error('timed out') : e; }
   finally { clearTimeout(t); }
 }
 async function overpass(q){   // tries the main server, then a mirror
   let err;
-  for (const h of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']){
+  for (const h of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter']){
     try { return await getT(h + '?data=' + encodeURIComponent(q), 20000); } catch(e){ err = e; }
   }
   throw err;
@@ -343,6 +346,10 @@ async function loadSpots(lat, lon){
   const id = ++spotRun, box = $('spots'); spotsMsg = ''; if (!box) return;
   box.innerHTML = '<h3>Finding beaches nearby…</h3><div class="skel"></div>';
   try {
+    const ck = 'sb-spots:' + lat.toFixed(2) + ',' + lon.toFixed(2);
+    let list = null;
+    try { const c = JSON.parse(localStorage.getItem(ck) || 'null'); if (c && Date.now() - c.t < 864e5) list = c.list; } catch(e){}
+    if (!list){
     const jb = await overpass(`[out:json][timeout:20];nwr["natural"="beach"]["name"](around:40000,${lat},${lon});out center tags;`);
     const seen = new Map();
     jb.elements.filter(e => e.tags && e.tags.name).forEach(e => {
@@ -350,13 +357,15 @@ async function loadSpots(lat, lon){
       if (c.lat == null) return;
       if (!seen.has(n) || seen.get(n).km > km) seen.set(n, {name:n, lat:c.lat, lon:c.lon, km});
     });
-    let list = [...seen.values()].sort((a,b)=>a.km-b.km).slice(0,12);
+    list = [...seen.values()].sort((a,b)=>a.km-b.km).slice(0,12);
     if (list.length){
       const cq = `[out:json][timeout:20];(${list.map(s=>`way["natural"="coastline"](around:200,${s.lat},${s.lon});`).join('')});out geom;`;
       const coast = (await overpass(cq)).elements.filter(e => e.type==='way' && e.geometry);
       list.forEach(s => s.facing = facing(s, coast));
       list = list.filter(s => s.facing != null);
       if (!list.length) throw new Error('could not work out beach angles');
+    }
+      if (list.length) try { localStorage.setItem(ck, JSON.stringify({t:Date.now(), list})); } catch(e){}
     }
     list = list.filter(s => s.facing != null);
     try {   // real road drive times; falls back to a rough estimate
@@ -401,7 +410,7 @@ function drawSpots(){
     : `Nothing nearby looks good for level ${level} today. These are the least bad. Consider another day or a lesson with a surf school.`;
   const cards = ranked.map(({s,r},i) => {
     const b = Engine.band(r.total), tag = {g:'✓ Good',o:'~ Marginal',r:'✕ Skip'}[b];
-    const shelter = r.none ? 'No daylight window left today.' : r.e < 0.5 ? 'Sheltered from today’s swell, so smaller waves.' : r.e >= 0.9 ? 'Faces the swell head-on.' : 'Partly sheltered from the swell.';
+    const shelter = r.none ? 'No suitable daylight window.' : r.e < 0.5 ? 'Sheltered from today’s swell, so smaller waves.' : r.e >= 0.9 ? 'Faces the swell head-on.' : 'Partly sheltered from the swell.';
     const wind = r.none ? '' : r.type==='offshore' ? ' Offshore wind keeps it clean.' : r.type==='onshore' ? ' Onshore wind makes it choppy.' : ' Wind blows along the beach.';
     const big = !r.none && r.h > CONFIG.levels[level-1].maxH ? ' ⚠ Bigger than level '+level+' should handle.' : '';
     const when = r.none ? '' : ` · best ${hr(r.win[0].hour)} to ${hr(r.win[1].hour+1)} · ${Engine.bodyHeight(r.h)}`;
