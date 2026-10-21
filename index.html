@@ -75,6 +75,7 @@ select{display:block;width:100%;font:inherit;min-height:48px;border-radius:12px;
 .sugg .msg{cursor:default;color:var(--mute);border:0}.sugg .msg:hover{background:none}
 .where{margin:10px 0 0;font-size:.9rem;color:var(--mute)}.where b{color:var(--ink)}
 button.link{min-height:0;border:0;background:none;color:var(--teal);text-decoration:underline;padding:4px 2px;font-weight:600}
+.cond{margin:12px 0 0;font-size:.85rem;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -254,14 +255,14 @@ function render(){
   let cls, title;
   if (l1.b.avg >= CONFIG.goodAt){ cls='good'; title='Good for beginners'; }
   else if (l3.b.avg >= CONFIG.goodAt){ cls='ok'; title="Okay if you're level 3+"; }
-  else { cls='bad'; title='Skip '+data.label; }
+  else { cls='bad'; title='Not recommended'; }
   const i = mine.b.i, win = i>=0 ? rows.slice(i, i+2) : [];
   const mAvg = Math.round(mine.b.avg);
   const myBand = Engine.band(mAvg);
   const forYou = i<0 ? 'No safe window left today.' :
     myBand==='g' ? `For your level: go. Best window ${hr(win[0].hour)} to ${hr(win[1].hour+1)}.` :
     myBand==='o' ? `For your level: marginal. If you go, aim for ${hr(win[0].hour)} to ${hr(win[1].hour+1)} and stay close to shore.` :
-    'For your level: skip it, or take a lesson with a school.';
+    'For your level: not recommended. A lesson with a surf school is the safe way to go.';
   const ref = win[0] || usable[0], s0 = Engine.score({...ref, daylight:true}, level) || {type:'cross'};
   const reasons = [];
   reasons.push(`Waves are ${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)}). ${ref.h > CONFIG.levels[level-1].maxH ? 'That is bigger than level '+level+' should handle.' : ref.h < CONFIG.levels[level-1].idealMin ? 'Small, so expect a slow, mellow session.' : 'A comfortable size for level '+level+'.'}`);
@@ -288,11 +289,12 @@ function render(){
     <h2>${cls==='good'?'✓':cls==='ok'?'~':'✕'} ${title}</h2>
     <p class="for">${forYou}</p>
     <ul>${reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
+    <p class="cond"><b>Conditions ${data.label}:</b> ${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)}) waves · ${Math.round(ref.period)}s period · ${Math.round(ref.windMph)} mph ${s0.type} wind${sst!=null ? ' · '+Math.round(sst)+'°C water' : ''}</p>
   </div>
   <section class="card"><h3>Best time ${data.label} (level ${level})</h3>
     <div class="tl" role="img" aria-label="Hourly suitability today. Outlined bars mark the best two-hour window.">${bars}</div>
     <div class="ticks" aria-hidden="true">${ticks}</div>
-    <p class="legend">✓ good &nbsp; ~ marginal &nbsp; ✕ skip &nbsp; Outlined = best window</p></section>
+    <p class="legend">✓ good &nbsp; ~ marginal &nbsp; ✕ not recommended &nbsp; Outlined = best window</p></section>
   <section class="card"><h3>Conditions ${data.label==='today'?'now':'tomorrow'}</h3><dl>
     <dt>Wave size</dt><dd>${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)})</dd>
     <dt>${term('Period','Seconds between wave crests. Beginners like 6 to 10.')}</dt><dd>${Math.round(ref.period)} seconds</dd>
@@ -410,7 +412,7 @@ async function run(lat, lon, name){
   $('out').innerHTML = '<div class="skel" aria-label="Loading"></div>';
   $('spots').hidden = false; drawSpots();
   const fcP = loadForecast(lat, lon).then(d => ({d}), e => ({e}));
-  const spP = findSpots(lat, lon).then(l => ({l}), e => ({e}));
+  const spP = Promise.race([findSpots(lat, lon), new Promise((_, rej) => setTimeout(() => rej(new Error('timed out')), 35000))]).then(l => ({l}), e => ({e}));
   const fc = await fcP; if (id !== runId) return;
   if (fc.e) $('out').innerHTML = `<div class="err">Couldn't load the forecast (${esc(fc.e.message)}). Check your connection and try again.</div>`;
   else if (hasWaves(fc.d)){ data = fc.d; render(); }
@@ -432,27 +434,29 @@ async function run(lat, lon, name){
 }
 
 /* ========= Spot finder: beaches from OpenStreetMap, drive times from OSRM, map from Leaflet ========= */
-/* Beaches: nearest named beaches from Photon (OpenStreetMap, worldwide), with Overpass as a backup source.
-   Beach angle: probe a ring of points around each beach with the Open-Meteo elevation API (sea = 0 m), then face the way the sea is. */
+/* Three free OpenStreetMap sources are asked at the same time (Photon, Nominatim, Overpass); whatever answers within ~10 s is merged. */
 async function beachesNear(lat, lon){
-  const S = CONFIG.spots; let els = [];
-  try {
-    const g = await getT(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&radius=${S.radiusKm}&limit=40&osm_tag=natural:beach&lang=en`, 10000);
-    els = g.features.filter(f => f.properties && f.properties.name).map(f => ({name:f.properties.name, lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0]}));
-  } catch(e){}
-  if (els.length < 3){
-    try {
-      const j = await overpass(`[out:json][timeout:25];nwr["natural"="beach"]["name"](around:${S.radiusKm*1000},${lat},${lon});out center tags;`);
-      j.elements.forEach(e => { const c = e.center || e;
-        if (e.tags && e.tags.name && c.lat != null && !['private','no'].includes(e.tags.access)) els.push({name:e.tags.name, lat:c.lat, lon:c.lon}); });
-    } catch(e){ if (!els.length) throw e; }
-  }
+  const S = CONFIG.spots, dy = S.radiusKm/111.2, dx = dy/Math.cos(lat*R_);
+  const op = host => getT(host + '?data=' + encodeURIComponent(`[out:json][timeout:9];nwr["natural"="beach"]["name"](around:${S.radiusKm*1000},${lat},${lon});out center tags;`), 10000)
+    .then(j => j.elements.filter(e => e.tags && e.tags.name && !['private','no'].includes(e.tags.access)).map(e => { const c = e.center || e; return {name:e.tags.name, lat:c.lat, lon:c.lon}; }));
+  const jobs = [
+    getT(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&radius=${S.radiusKm}&limit=40&osm_tag=natural:beach&lang=en`, 9000)
+      .then(g => g.features.filter(f => f.properties && f.properties.name).map(f => ({name:f.properties.name, lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0]}))),
+    getT(`https://nominatim.openstreetmap.org/search?q=beach&format=jsonv2&limit=40&bounded=1&viewbox=${lon-dx},${lat+dy},${lon+dx},${lat-dy}`, 9000)
+      .then(a => a.filter(p => p.type === 'beach' && p.name).map(p => ({name:p.name, lat:+p.lat, lon:+p.lon}))),
+    op('https://overpass-api.de/api/interpreter'),
+    op('https://overpass.kumi.systems/api/interpreter')
+  ];
+  const res = await Promise.allSettled(jobs), ok = res.filter(r => r.status === 'fulfilled');
+  if (!ok.length) throw new Error('the free map servers did not answer');
   const seen = new Map();
-  els.forEach(b => { const km = hav(lat,lon,b.lat,b.lon); if (km > S.radiusKm*1.1) return;
+  ok.flatMap(r => r.value).forEach(b => { if (b.lat == null || b.lon == null) return;
+    const km = hav(lat,lon,b.lat,b.lon); if (km > S.radiusKm*1.1) return;
     if (!seen.has(b.name) || seen.get(b.name).km > km) seen.set(b.name, {...b, km}); });
   return [...seen.values()].sort((a,b) => a.km-b.km).slice(0, S.max);
 }
 
+/* Beach angle: probe a ring of points around each beach with the Open-Meteo elevation API (sea = 0 m), then face the way the sea is. */
 async function addFacing(list){
   const N = 12, D = CONFIG.spots.probeKm, pts = [];
   list.forEach(s => { for (let k=0; k<N; k++){ const t = k*360/N*R_;
@@ -487,7 +491,7 @@ async function addDrive(lat, lon, list){   // real road times from OSRM; falls b
   list.sort((a,b) => a.km - b.km);
   try {
     const co = [lon+','+lat, ...list.map(s => s.lon+','+s.lat)].join(';');
-    const d = await getT(`https://router.project-osrm.org/table/v1/driving/${co}?sources=0&annotations=duration`, 8000);
+    const d = await getT(`https://router.project-osrm.org/table/v1/driving/${co}?sources=0&annotations=duration`, 5000);
     list.forEach((s,i) => { const v = d.durations[0][i+1]; if (v != null) s.min = Math.round(v/60); });
   } catch(e){}
   list.forEach(s => { if (!(s.min >= 0)){ s.min = Math.round(s.km*1.4/50*60); s.est = true; } });
@@ -507,7 +511,7 @@ function drawSpots(){
   const box = $('spots'); if (!box) return;
   if (map){ map.remove(); map = null; }
   if (!spotsData || !data){
-    box.innerHTML = spotsMsg || '<h3>Finding beaches nearby…</h3><p class="legend">The free map server can take a few seconds.</p><div class="skel"></div>';
+    box.innerHTML = spotsMsg || '<h3>Finding beaches nearby…</h3><p class="legend">Asking the free map servers. This can take up to 30 seconds.</p><div class="skel"></div>';
     const rb = $('retry'); if (rb) rb.onclick = () => run(center.lat, center.lon, place);
     return;
   }
@@ -521,7 +525,7 @@ function drawSpots(){
     : goodOnes ? `Nearby beaches, best first for level ${level}:`
     : `Nothing nearby looks good for level ${level} today. These are the least bad. Consider another day or a lesson with a surf school.`;
   const cards = ranked.map(({s,r},i) => {
-    const b = Engine.band(r.total), tag = {g:'✓ Good',o:'~ Marginal',r:'✕ Skip'}[b];
+    const b = Engine.band(r.total), tag = {g:'✓ Good',o:'~ Marginal',r:'✕ Not recommended'}[b];
     const shelter = r.none ? 'No suitable daylight window.' : s.facing == null ? 'Beach angle unclear, so ranked on size and wind only.' : r.e < 0.5 ? 'Sheltered from today’s swell, so smaller waves.' : r.e >= 0.9 ? 'Faces the swell head-on.' : 'Partly sheltered from the swell.';
     const wind = r.none ? '' : r.type==='offshore' ? ' Offshore wind keeps it clean.' : r.type==='onshore' ? ' Onshore wind makes it choppy.' : ' Wind blows along the beach.';
     const big = !r.none && r.h > CONFIG.levels[level-1].maxH ? ' ⚠ Bigger than level '+level+' should handle.' : '';
