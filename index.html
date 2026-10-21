@@ -80,11 +80,13 @@ button.link{min-height:0;border:0;background:none;color:var(--teal);text-decorat
 #rn{flex:none;width:88px;min-width:0}#ru{display:inline-block;width:auto;margin:0;flex:1 1 150px}
 .spot .ln{display:block}
 .pin{padding:0 8px;white-space:nowrap}
+.pin{height:24px;border-radius:12px;font-size:.72rem}
+h1 small{font-family:system-ui,sans-serif;font-size:.7rem;font-weight:400;color:var(--mute);margin-left:6px}
 </style>
 </head>
 <body>
 <main>
-<h1>Shorebreak</h1>
+<h1>Shorebreak <small id="ver"></small></h1>
 <p class="sub">Is the surf right for you today? Plain-English answers from free marine forecast data.</p>
 
 <form class="row" id="f" role="search">
@@ -228,6 +230,8 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
+const VERSION = '0.6 · 21 Oct 2026';   // bump this each time the file changes
+$('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null;
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
 
@@ -411,7 +415,7 @@ $('geo').addEventListener('click', () => {
 
 /* ========= Run: forecast and beaches load side by side ========= */
 async function run(lat, lon, name){
-  const id = ++runId; spotRun++; showN = 8;
+  const id = ++runId; spotRun++; showN = 10;
   place = name; center = {lat, lon}; data = null; spotsData = null; spotsMsg = ''; fcFrom = null;
   $('out').innerHTML = '<div class="skel" aria-label="Loading"></div>';
   $('spots').hidden = false; drawSpots();
@@ -509,7 +513,7 @@ function scoreSpot(s, L){
 }
 
 /* ===== How far are you willing to travel? (miles, km or minutes of driving) ===== */
-let reach = {n:25, unit:'mi'}, showN = 8, spotRun = 0;
+let reach = {n:25, unit:'mi'}, showN = 10, spotRun = 0;
 try { const r = JSON.parse(localStorage.getItem('sb-reach') || 'null'); if (r && r.n > 0 && ['mi','km','min'].includes(r.unit)) reach = r; } catch(e){}
 const unitLbl = {mi:'miles', km:'km', min:'minutes drive'};
 const reachKm = () => Math.min(120, Math.max(2, reach.unit === 'mi' ? reach.n*1.609 : reach.n));   // search radius; for minutes it's a generous straight-line guess, then real drive times filter
@@ -526,7 +530,7 @@ function bindReach(){
 }
 async function reloadSpots(){
   if (!center) return;
-  const id = runId, sid = ++spotRun; showN = 8; spotsData = null; spotsMsg = ''; drawSpots();
+  const id = runId, sid = ++spotRun; showN = 10; spotsData = null; spotsMsg = ''; drawSpots();
   try {
     const l = await Promise.race([findSpots(center.lat, center.lon), new Promise((_, rej) => setTimeout(() => rej(new Error('timed out')), 35000))]);
     await addDrive(center.lat, center.lon, l);
@@ -570,18 +574,18 @@ function drawSpots(){
       <span class="ln">${when}about ${s.min} min drive${s.est?' (estimate)':''} · ${dist(s.km)}</span><small>${shelter}${wind}${big}</small></button>`;
   }).join('');
   const more = all.length > showN ? `<button type="button" class="spot" id="more">Show more beaches (${all.length-showN} more)</button>` : '';
-  box.innerHTML = head + `<h3>${title}</h3><p>${intro}</p><div id="map" role="region" aria-label="Map of nearby beaches"></div>${cards}${more}
+  box.innerHTML = head + `<h3>${title}</h3><p>${intro}</p><p class="legend">Showing ${ranked.length} of ${all.length} beaches within ${reach.n} ${unitLbl[reach.unit]}. The map shows all of them.</p><div id="map" role="region" aria-label="Map of nearby beaches"></div>${cards}${more}
     <p class="legend">Wave heights are rough estimates for each beach, worked out from its angle. Beach angles are estimated, so local knowledge matters. Ask a lifeguard or surf school.</p>`;
   bindReach(); const mb = $('more'); if (mb) mb.onclick = () => { showN += 10; drawSpots(); };
   if (typeof L === 'undefined'){ $('map').outerHTML = '<p class="legend">Map couldn’t load (check your connection).</p>'; return; }
   map = L.map('map', {scrollWheelZoom:false});
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18, attribution:'© OpenStreetMap contributors'}).addTo(map);
   L.circleMarker([center.lat, center.lon], {radius:7, color:'#fff', weight:2, fillColor:'#0c2a31', fillOpacity:1}).addTo(map).bindTooltip('You searched here');
-  const markers = ranked.map(({s,r}) => { const b = Engine.band(r.total);
-    return L.marker([s.lat, s.lon], {icon:L.divIcon({className:'', iconSize:[104,28], iconAnchor:[52,14],
-      html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'✕'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`})}).addTo(map)
-      .bindPopup(`<b>${esc(s.name)}</b><br>About ${s.min} min drive`); });
-  map.fitBounds(L.latLngBounds([[center.lat, center.lon], ...ranked.map(x => [x.s.lat, x.s.lon])]).pad(0.15));
+  const markers = all.map(({s,r},i) => { const b = Engine.band(r.total);
+    return L.marker([s.lat, s.lon], {icon:L.divIcon({className:'', iconSize:[96,24], iconAnchor:[48,12],
+      html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'✕'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`}), zIndexOffset:1000-i}).addTo(map)
+      .bindPopup(`<b>${esc(s.name)}</b><br>${r.none ? '' : roughFt(r.h)+' waves · '+Math.round(r.period)+'s swell<br>'}About ${s.min} min drive`); });
+  map.fitBounds(L.latLngBounds([[center.lat, center.lon], ...all.map(x => [x.s.lat, x.s.lon])]).pad(0.15));
   box.querySelectorAll('.spot[data-i]').forEach(el => el.addEventListener('click', () => {
     const m = markers[+el.dataset.i]; map.setView(m.getLatLng(), 14); m.openPopup(); $('map').scrollIntoView({block:'center'});
   }));
