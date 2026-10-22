@@ -539,7 +539,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.37 · 22 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.39 · 22 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -801,11 +801,18 @@ const sCache = new Map(), uniq = a => [...new Set(a.filter(Boolean))];
 
 async function searchPlaces(q){
   if (sCache.has(q)) return sCache.get(q);
-  let out = null;
-  try {
-    const g = await get(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=8&language=en&format=json`);
-    out = (g.results || []).map(p => ({name:p.name, lat:p.latitude, lon:p.longitude, pop:p.population, sub:uniq([p.admin2, p.admin1, p.country]).join(', ')}));
-  } catch(e){}
+  // towns (Open-Meteo) and individual beaches (OpenStreetMap, via Photon) are asked at the same time
+  const geoP = get(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=8&language=en&format=json`)
+    .then(g => (g.results || []).map(p => ({name:p.name, lat:p.latitude, lon:p.longitude, pop:p.population, sub:uniq([p.admin2, p.admin1, p.country]).join(', ')})), () => null);
+  const near = center ? `&lat=${center.lat}&lon=${center.lon}` : '';   // lean toward the place already chosen
+  const beachP = get(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8&lang=en&osm_tag=natural:beach${near}`)
+    .then(g => g.features.filter(f => f.properties.name).map(f => { const p = f.properties;
+      return {name:p.name, lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0], beach:true, sub:uniq(['Beach', p.locality || p.district || p.city || p.county, p.state, p.country]).join(', ')}; }), () => null);
+  const [geo, bch] = await Promise.all([geoP, beachP]);
+  if (geo === null && bch === null) throw new Error('search failed');
+  const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 1), hit = b => words.every(w => b.name.toLowerCase().includes(w));
+  const bs = bch || [];   // beaches whose name matches go first, then towns, then loose beach matches
+  let out = [...bs.filter(hit), ...(geo || []), ...bs.filter(b => !hit(b)).slice(0, 2)];
   if (!out || !out.length){   // beaches and landmarks aren't in that list, so fall back to OpenStreetMap search (Photon)
     try {
       const g = await get(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8&lang=en`);
@@ -1228,7 +1235,7 @@ $('spots').addEventListener('click', e => {   // star a beach, or add a note to 
   }
 });
 const KNOWN = [{name:'Gwithian Beach', lat:50.2285, lon:-5.392, key:'gwithian'}];   // popular beaches the free map data sometimes leaves out
-const MAXB = 100;
+const MAXB = 150;   // most beaches kept in range (the first 48 load fast, the rest fill in quietly)
 function addKnown(list){
   list.rest = list.rest || [];
   KNOWN.forEach(k => {
@@ -1265,11 +1272,13 @@ async function enrichRest(){   // quietly check the rest of the beaches so every
   if (!list || !center) return;
   addKnown(list);
   if (!list.rest.length) return;
-  const room = Math.max(0, MAXB - list.filter(inReach).length), cand = list.rest.filter(inReach);
-  const todo = [...cand.filter(x => x.known), ...cand.filter(x => !x.known).slice(0, room)], live = () => eid === enrichRun && sid === spotRun && rid === runId && spotsData === list;
+  // Beaches not yet checked only have a rough drive time, which made far ones look out of range. For a drive-time limit, go by distance now; real times decide later.
+  const pool = list.rest.filter(x => reach.unit === 'min' ? x.km <= reachKm() * 1.1 : inReach(x));
+  const todo = [...pool.filter(x => x.known), ...pool.filter(x => !x.known)], live = () => eid === enrichRun && sid === spotRun && rid === runId && spotsData === list;
   let changed = false;
   for (let i = 0; i < todo.length; i += 24){
     if (!live()) return;
+    if (list.filter(inReach).length >= MAXB) break;
     try { await enrichMerge(list, todo.slice(i, i + 24)); changed = true; } catch(e){}
   }
   if (!changed || !live()) return;
