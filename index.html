@@ -246,16 +246,129 @@ body.fs-lock{overflow:hidden}
 .card.feat{border-top:1px solid var(--line)}.card.feat>h3{margin:0 0 6px}.card.feat>div{padding:0}
 #kitseg{grid-template-columns:repeat(3,1fr);margin-bottom:6px}#t-kit [hidden],#t-skills [hidden]{display:none!important}
 .spotw{position:relative}.spotw .spot{padding-right:58px}.fav{position:absolute;top:10px;right:6px;width:46px;height:46px;min-height:46px;padding:0;border:0;background:none;font-size:1.6rem;line-height:1;color:#c98a00}.fav[aria-pressed=true]{color:#e0a800}
+
+/* ===== v0.47 design: golden-hour coast. One strong moment (the hero and the verdict card); everything else stays quiet ===== */
+:root{--bg:#edf2f6;--bg2:#e0e9f0;--card:#fff;--ink:#0a2036;--mute:#556a7e;--line:#dbe4ec;--teal:#0b5a9c;--on:#fff;--gold:#f2b440;--good:#0f6b45;--goodbg:#dff3e8;--ok:#7a4d00;--okbg:#fbefcf;--bad:#a3201a;--badbg:#fbe3e0;
+ --sk0:#0c2b4d;--sk1:#3b5c8f;--sk2:#c98aa0;--sk3:#f6ad8a;--sk4:#ffd59a;--se0:#4b86b0;--se1:#1a5a8c;--se2:#0e3d66;--se3:#072542;--sun:#fff2cf}
+@media (prefers-color-scheme:dark){:root{--bg:#07121d;--bg2:#091a2a;--card:#0e2235;--ink:#e8f1f9;--mute:#94a9bd;--line:#1b3248;--teal:#6cb6f2;--on:#04192b;--good:#7be0a6;--goodbg:#0f3828;--ok:#f2c35b;--okbg:#3a2d0b;--bad:#ff9a92;--badbg:#441b19;
+ --sk0:#050d1c;--sk1:#16305a;--sk2:#43618f;--sk3:#8d86a8;--sk4:#d9b7a0;--se0:#2c557f;--se1:#163e66;--se2:#0c2c4e;--se3:#061b33;--sun:#e8ecf5}}
+html[data-theme=sea]{--bg:#e9f5f7;--bg2:#d6ecef;--card:#fff;--ink:#08303a;--mute:#4b6a72;--line:#d1e5e9;--teal:#09717f;--on:#fff;--sk0:#06323f;--sk1:#2d7d8c;--sk2:#8fc4b8;--sk3:#f3c58f;--sk4:#ffe3a8;--se0:#3f9fb0;--se1:#157a8a;--se2:#0c5566;--se3:#073a4a;--sun:#fff2cf}
+html[data-theme=sand]{--bg:#f5f1ea;--bg2:#ebe3d7;--card:#fffdfa;--ink:#2a2018;--mute:#6b5c4e;--line:#e7dbc9;--teal:#8f4220;--on:#fff;--sk0:#3b2a3a;--sk1:#8a5a6a;--sk2:#e0957f;--sk3:#f6bf8a;--sk4:#ffe0a8;--se0:#7aa0ad;--se1:#3d6f86;--se2:#27506a;--se3:#183a52;--sun:#fff2cf}
+html[data-theme=dusk]{--bg:#091524;--bg2:#0b1a2e;--card:#112338;--ink:#e9f1f8;--mute:#9bb1c6;--line:#1f3752;--teal:#6cb6f2;--on:#04192b;--sk0:#050d1c;--sk1:#16305a;--sk2:#43618f;--sk3:#8d86a8;--sk4:#d9b7a0;--se0:#2c557f;--se1:#163e66;--se2:#0c2c4e;--se3:#061b33;--sun:#e8ecf5}
+html{font-size:16px}
+body{background:linear-gradient(180deg,var(--bg),var(--bg2)) fixed;font-family:Inter,"SF Pro Text","Segoe UI",system-ui,Roboto,sans-serif}
+body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--ink);opacity:.04;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='120' viewBox='0 0 320 120'%3E%3Cg fill='none' stroke='black' stroke-width='1.2'%3E%3Cpath d='M0 20q40-12 80 0t80 0t80 0t80 0'/%3E%3Cpath d='M0 48q40-16 80 0t80 0t80 0t80 0'/%3E%3Cpath d='M0 76q40-10 80 0t80 0t80 0t80 0'/%3E%3Cpath d='M0 104q40-14 80 0t80 0t80 0t80 0'/%3E%3C/g%3E%3C/svg%3E") 0 0/320px 120px repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='120' viewBox='0 0 320 120'%3E%3Cg fill='none' stroke='black' stroke-width='1.2'%3E%3Cpath d='M0 20q40-12 80 0t80 0t80 0t80 0'/%3E%3Cpath d='M0 48q40-16 80 0t80 0t80 0t80 0'/%3E%3Cpath d='M0 76q40-10 80 0t80 0t80 0t80 0'/%3E%3Cpath d='M0 104q40-14 80 0t80 0t80 0t80 0'/%3E%3C/g%3E%3C/svg%3E") 0 0/320px 120px repeat}
+main{padding-bottom:112px}
+/* hero: the scene is the image; the page opens on the coast */
+.hero{position:relative;overflow:hidden;border-radius:28px;margin:6px 0 0;padding:26px 22px 0;color:#fff;background:var(--sk0);box-shadow:0 22px 44px -26px rgba(7,27,48,.65)}
+.hero>*:not(.scene){position:relative;z-index:1}
+.hero .eyebrow{margin:0;font-size:.82rem;font-weight:600;letter-spacing:0;text-transform:none;color:#ffe2a6}
+.hero h1{margin:2px 0 8px;font-size:2.5rem;line-height:1;font-weight:800;letter-spacing:-.04em}
+.hero .sub{margin:0 0 6px;max-width:19em;font-size:.95rem;line-height:1.45;color:rgba(255,255,255,.9)}
+.hero #ver{position:absolute;top:14px;right:14px;margin:0;font-size:.66rem;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.16);color:#fff}
+.hero .scene{position:relative;display:block;width:calc(100% + 44px);max-width:none;height:auto;margin:4px -22px 0;overflow:visible;z-index:0}
+/* compact header once a forecast is showing, or on any tab but Today */
+body.loaded .hero,body:not([data-tab=today]) .hero{background:linear-gradient(100deg,var(--sk0),var(--sk1));padding:14px 18px;border-radius:20px;margin:4px 0 12px;box-shadow:0 10px 24px -18px rgba(7,27,48,.6)}
+body.loaded .hero .scene,body:not([data-tab=today]) .hero .scene,body.loaded .hero .sub,body:not([data-tab=today]) .hero .sub,body.loaded .hero .eyebrow,body:not([data-tab=today]) .hero .eyebrow{display:none}
+body.loaded .hero h1,body:not([data-tab=today]) .hero h1{margin:0;font-size:1.3rem;letter-spacing:-.02em}
+body.loaded .hero #ver,body:not([data-tab=today]) .hero #ver{top:50%;transform:translateY(-50%)}
+/* search floats over the bottom of the hero */
+form.row{position:relative;z-index:2;margin:-26px 8px 0;padding:5px;border:0;border-radius:20px;background:var(--card);box-shadow:0 14px 30px -14px rgba(7,27,48,.45),0 0 0 1px color-mix(in srgb,var(--line) 70%,transparent)}
+body.loaded form.row,body:not([data-tab=today]) form.row{margin:0}
+form.row:focus-within{box-shadow:0 14px 30px -14px rgba(7,27,48,.45),0 0 0 2px var(--teal)}
+form.row button.go{border-radius:15px;background:var(--teal);color:var(--on)}
+.where{margin:10px 6px 0;font-size:.85rem;color:var(--mute)}
+.where:empty{display:none}
+/* level and time of day sit together in one calm panel */
+#strip{background:var(--card);border-radius:22px;padding:14px 14px 12px;margin:12px 0 14px;box-shadow:0 1px 2px rgba(10,32,54,.05),0 16px 34px -22px rgba(10,32,54,.35)}
+#strip[hidden]{display:none}
+.lab{margin:0 2px 6px;font-size:.82rem;font-weight:700;letter-spacing:0;text-transform:none;color:var(--ink)}
+#strip .lab ~ .lab{margin-top:12px}
+.levels,.whens,.ptabs,.seg{background:color-mix(in srgb,var(--ink) 6%,transparent);border-radius:14px;padding:3px;gap:2px}
+.levels button,.whens button{min-height:40px;border:0;border-radius:11px;background:transparent;box-shadow:none;font-size:.85rem}
+.levels button[aria-pressed=true],.whens button[aria-pressed=true],.ptabs button[aria-pressed=true],.seg button[aria-pressed=true]{background:var(--teal);color:var(--on);box-shadow:0 4px 10px -4px color-mix(in srgb,var(--teal) 70%,transparent)}
+.lvname{margin:6px 2px 0;font-size:.8rem;color:var(--mute)}
+/* cards: no outlines, soft lift, clear hierarchy */
+.card{border:0;border-radius:22px;padding:18px;margin:14px 0;box-shadow:0 1px 2px rgba(10,32,54,.05),0 16px 34px -22px rgba(10,32,54,.35)}
+.card h3{margin:0 0 10px;font-size:1.05rem;font-weight:750;letter-spacing:-.015em}
+.note{font-size:.78rem;color:var(--mute);margin:18px 6px}
+/* the verdict is the answer, so it is the boldest thing on the page */
+.verdict{position:relative;overflow:hidden;border:0;border-radius:26px;padding:22px 20px 18px;margin:4px 0 14px;color:#fff;box-shadow:0 22px 40px -24px rgba(7,27,48,.6)}
+.verdict.good{background:linear-gradient(155deg,#0a573a,#12805a);color:#fff}
+.verdict.ok{background:linear-gradient(155deg,#6f4400,#a06500);color:#fff}
+.verdict.bad{background:linear-gradient(155deg,#861813,#b8312a);color:#fff}
+.verdict::after{content:'';position:absolute;left:0;right:0;bottom:0;height:84px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 90' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 46c50 0 50-26 100-26s50 26 100 26 50-26 100-26 50 26 100 26v44H0z'/%3E%3Cpath fill='white' opacity='.55' d='M0 66c40 0 40-18 80-18s40 18 80 18 40-18 80-18 40 18 80 18 40-18 80-18v42H0z'/%3E%3C/svg%3E") bottom/100% 100% no-repeat;opacity:.13;pointer-events:none}
+.verdict>*{position:relative;z-index:1}
+.verdict h2{margin:0 0 6px;font-size:1.85rem;line-height:1.1;font-weight:800;letter-spacing:-.03em;color:#fff}
+.verdict .for{margin:0 0 14px;font-size:1rem;font-weight:600;color:rgba(255,255,255,.96)}
+.verdict ul{list-style:none;margin:0;padding:0;color:#fff}
+.verdict li{position:relative;margin:7px 0;padding-left:20px;font-size:.95rem;line-height:1.45}
+.verdict li::before{content:'';position:absolute;left:2px;top:.6em;width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.7)}
+.verdict .cond{display:none}
+.verdict .explain{margin-top:14px;border-top:1px solid rgba(255,255,255,.25);color:#fff}
+.verdict .explain summary{padding:12px 0 6px;font-size:.92rem;font-weight:650}
+.verdict .explain p,.verdict .explain li{font-size:.88rem;color:rgba(255,255,255,.92)}
+.verdict .explain .legend{color:rgba(255,255,255,.75)}
+/* hour-by-hour bars */
+.tl{gap:4px;height:92px}
+.tl div{border-radius:9px;font-size:.6rem;padding-top:4px}
+.tl .g{background:linear-gradient(180deg,color-mix(in srgb,var(--good) 80%,#fff),var(--good))}
+.tl .o{background:linear-gradient(180deg,color-mix(in srgb,var(--ok) 80%,#fff),var(--ok))}
+.tl .r{background:linear-gradient(180deg,color-mix(in srgb,var(--bad) 80%,#fff),var(--bad))}
+.tl .best{outline:2px solid var(--gold);outline-offset:2px}
+.legend{color:var(--mute);font-size:.8rem}
+/* conditions as tiles */
+dl.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+dl.tiles .st{background:color-mix(in srgb,var(--ink) 5%,transparent);border-radius:16px;padding:12px 14px;min-width:0}
+dl.tiles dt{font-size:.78rem;font-weight:600;color:var(--mute)}
+dl.tiles dd{margin:3px 0 0;font-size:1rem;font-weight:700;line-height:1.3}
+/* beaches */
+.spot{border:0;border-left:5px solid var(--line);border-radius:16px;background:var(--card);box-shadow:0 1px 2px rgba(10,32,54,.06),0 10px 24px -18px rgba(10,32,54,.4)}
+.spot:has(.tag.g){border-left-color:var(--good)}.spot:has(.tag.o){border-left-color:var(--ok)}.spot:has(.tag.r){border-left-color:var(--bad)}
+.sugg{border:0;border-radius:18px;box-shadow:0 18px 40px -16px rgba(7,27,48,.5),0 0 0 1px var(--line)}
+/* floating navigation */
+nav#nav{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));max-width:620px;margin:0 auto;padding:4px;border:1px solid color-mix(in srgb,var(--line) 80%,transparent);border-radius:24px;background:color-mix(in srgb,var(--card) 92%,transparent);box-shadow:0 16px 36px -14px rgba(7,27,48,.45)}
+nav#nav button{min-height:54px;max-width:none;padding:0 1px;border-radius:19px;font-size:.62rem;font-weight:650;gap:2px}
+nav#nav button[aria-current=page]{background:color-mix(in srgb,var(--teal) 13%,transparent);color:var(--teal);box-shadow:none}
+nav#nav button[aria-current=page]::after{display:none}
+#tip{bottom:92px}
+/* empty state */
+#out:empty,#week:empty{min-height:0;background:none}
+#out:empty::before,#week:empty::before{padding:10px 12px 0}
+
 </style>
 </head>
-<body>
+<body data-tab="today">
 <main>
 <header class="hero">
 <small id="ver"></small>
 <p class="eyebrow">Beginner surf guide</p>
 <h1>Shorebreak</h1>
 <p class="sub">Is the surf right for your level today? Plain-English answers from free marine forecast data.</p>
-<svg class="scene" viewBox="0 0 400 84" preserveAspectRatio="none" aria-hidden="true"><circle cx="338" cy="30" r="26" fill="#ffd98a" opacity=".18"/><circle cx="338" cy="30" r="14" fill="#ffd98a"/><path fill="#fff" opacity=".1" d="M0 40c50 0 50-18 100-18s50 18 100 18 50-18 100-18 50 18 100 18v44H0z"/><path fill="#fff" opacity=".16" d="M0 56c40 0 40-14 80-14s40 14 80 14 40-14 80-14 40 14 80 14 40-14 80-14v42H0z"/><path style="fill:var(--bg)" d="M0 70c33 0 33-10 66-10s33 10 66 10 33-10 66-10 33 10 66 10 33-10 66-10 33 10 70 10v14H0z"/></svg>
+<svg class="scene" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+<defs>
+<linearGradient id="hSky" gradientUnits="userSpaceOnUse" x1="0" y1="-170" x2="0" y2="118"><stop offset="0" style="stop-color:var(--sk0)"/><stop offset=".58" style="stop-color:var(--sk1)"/><stop offset=".8" style="stop-color:var(--sk2)"/><stop offset=".93" style="stop-color:var(--sk3)"/><stop offset="1" style="stop-color:var(--sk4)"/></linearGradient>
+<linearGradient id="hSea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--se0)"/><stop offset=".45" style="stop-color:var(--se1)"/><stop offset="1" style="stop-color:var(--se2)"/></linearGradient>
+<linearGradient id="hWave" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--se0)"/><stop offset=".5" style="stop-color:var(--se1)"/><stop offset="1" style="stop-color:var(--se2)"/></linearGradient>
+<radialGradient id="hGlow"><stop offset="0" stop-color="#ffe2a6" stop-opacity=".75"/><stop offset="1" stop-color="#ffe2a6" stop-opacity="0"/></radialGradient>
+</defs>
+<rect x="-30" y="-900" width="460" height="1018" fill="url(#hSky)"/>
+<circle cx="288" cy="112" r="60" fill="url(#hGlow)"/>
+<circle cx="288" cy="109" r="17" style="fill:var(--sun)"/>
+<g fill="#fff"><ellipse cx="96" cy="66" rx="58" ry="2.6" opacity=".16"/><ellipse cx="128" cy="74" rx="34" ry="2" opacity=".12"/><ellipse cx="350" cy="52" rx="42" ry="2.4" opacity=".15"/><ellipse cx="40" cy="38" rx="30" ry="2" opacity=".12"/></g>
+<path d="M-10 119V98C14 95 30 84 52 87c24 3 36 18 62 32z" style="fill:var(--se3)" opacity=".7"/>
+<rect x="-30" y="118" width="460" height="90" fill="url(#hSea)"/>
+<g fill="#ffe6b4"><rect x="266" y="122" width="46" height="1.6" rx=".8" opacity=".8"/><rect x="273" y="127" width="32" height="1.6" rx=".8" opacity=".65"/><rect x="259" y="132" width="52" height="1.6" rx=".8" opacity=".45"/><rect x="278" y="138" width="22" height="1.6" rx=".8" opacity=".35"/></g>
+<path d="M-10 141C30 131 62 148 112 140s78-14 130-2 96 12 178-2v64H-10z" style="fill:var(--se1)" opacity=".8"/>
+<path d="M-10 141C30 131 62 148 112 140s78-14 130-2 96 12 178-2" fill="none" stroke="#fff" stroke-width="1.3" opacity=".35" stroke-linecap="round"/>
+<path d="M130 200C176 176 238 143 290 138c28-3 44 7 52 22 6 12 8 28 14 40z" fill="url(#hWave)"/>
+<path d="M254 148C272 134 304 130 328 146c-10-6-26-8-40-5-14 3-24 6-34 7z" fill="#fff" opacity=".92"/>
+<path d="M326 147c6 4 10 10 12 18" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+<path d="M170 183c14-8 34-18 56-25" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".25"/>
+<g transform="translate(286 134)"><ellipse cx="0" cy="8" rx="11" ry="1.9" transform="rotate(-24)" fill="#f8efe0"/><g fill="none" stroke="#071b30" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M-3 7L0 0l4 6M0 0l1-8M1-6l-6 3M1-6l6-3"/></g><circle cx="1.4" cy="-10.6" r="2.3" fill="#071b30"/></g>
+<path d="M-10 182c60-8 104 8 190-1s150-9 240 1v18H-10z" style="fill:var(--se3)"/>
+<path d="M-10 182c60-8 104 8 190-1s150-9 240 1" fill="none" stroke="#fff" stroke-width="1.2" opacity=".3"/>
+</svg>
 </header>
 
 <form class="row" id="f" role="search">
@@ -543,7 +656,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.46 · 22 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.47 · 22 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -830,13 +943,14 @@ function render(){
     <div class="tl" role="img" aria-label="Hourly suitability today. Outlined bars mark the best two-hour window.">${bars}</div>
     <div class="ticks" aria-hidden="true">${ticks}</div>
     <p class="legend">✓ good &nbsp; ~ marginal &nbsp; ○ not ideal &nbsp; Outlined = best window</p></section>
-  <section class="card"><h3>Conditions ${data.k ? data.label : 'now'}</h3><dl>
-    <dt>Wave size</dt><dd>${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)})</dd>
-    <dt>${term('Period','Seconds between wave crests. Beginners like 6 to 10.')}</dt><dd>${Math.round(ref.period)} seconds</dd>
-    <dt>Wind</dt><dd>${fmtW(ref.windMph)}, ${s0.type}</dd>
-    <dt>Water</dt><dd>${sst!=null ? fmtT(sst)+': wear '+Engine.wetsuit(sst) : 'not available'}</dd>
-    <dt>Tide</dt><dd>${tideTxt()}</dd>
-    <dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></dl>${data.tides && data.tides.length ? '<p class="legend">Tides are model estimates from hourly data, so times can be an hour or so out, and heights are against mean sea level. Check a local tide table.</p>' : ''}</section>`;
+  <section class="card"><h3>Conditions ${data.k ? data.label : 'now'}</h3><dl class="tiles">
+    <div class="st"><dt>Wave size</dt><dd>${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)})</dd></div>
+    <div class="st"><dt>${term('Period','Seconds between wave crests. Beginners like 6 to 10.')}</dt><dd>${Math.round(ref.period)} seconds</dd></div>
+    <div class="st"><dt>Wind</dt><dd>${fmtW(ref.windMph)}, ${s0.type}</dd></div>
+    <div class="st"><dt>Water</dt><dd>${sst!=null ? fmtT(sst)+': wear '+Engine.wetsuit(sst) : 'not available'}</dd></div>
+    <div class="st"><dt>Tide</dt><dd>${tideTxt()}</dd></div>
+    <div class="st"><dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></div></dl>${data.tides && data.tides.length ? '<p class="legend">Tides are model estimates from hourly data, so times can be an hour or so out, and heights are against mean sea level. Check a local tide table.</p>' : ''}</section>`;
+  document.body.classList.add('loaded');
   const ub = $('upd'); if (ub) ub.onclick = () => run(center.lat, center.lon, place);
   drawWeek();
   drawReport();
@@ -1631,7 +1745,7 @@ $('nav').addEventListener('click', e => { const b = e.target.closest('button'); 
 function go(id){
   const t = TABS.find(x => x.id === id) || TABS[0];
   TABS.forEach(x => { $('t-' + x.id).hidden = x.id !== t.id; });
-  $('strip').hidden = !t.strip;
+  $('strip').hidden = !t.strip; document.body.dataset.tab = t.id;
   $('nav').querySelectorAll('button').forEach(b => b.setAttribute('aria-current', b.dataset.t === t.id ? 'page' : 'false'));
   if (t.id === 'beaches' && data && spotsData) drawSpots();   // the map needs a visible box to size itself
   if (t.id === 'report') drawReport();
