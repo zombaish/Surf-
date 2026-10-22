@@ -192,6 +192,25 @@ form.row button.go{background:var(--teal);color:var(--on)}
 .feat input:not([type=checkbox]),.feat select,.feat textarea{width:100%;min-width:0;min-height:46px;padding:10px 12px;font:inherit;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)}
 .tick{display:flex;gap:10px;align-items:center;padding:6px 0;font-size:.92rem}.tick input{width:20px;height:20px;min-height:0;min-width:0;padding:0;flex:none}
 .eq{margin:8px 0}.eq .fb{display:block;color:var(--mute);margin-top:2px}
+/* ===== v0.21 progress checklists ===== */
+#pmsg:empty{display:none}
+#prog h4{margin:16px 0 4px;font-size:.95rem}
+.lvup:focus{outline:2px solid var(--good);outline-offset:2px}
+.ptabs,.seg{display:grid;gap:2px;padding:3px;border-radius:14px;background:color-mix(in srgb,var(--line) 60%,transparent)}
+.ptabs{grid-template-columns:repeat(5,1fr);margin:6px 0 10px}
+.seg{grid-template-columns:repeat(3,1fr);margin:8px 0 0}
+.ptabs button,.seg button{min-height:42px;padding:0 2px;border:0;border-radius:11px;background:transparent;box-shadow:none;font-size:.85rem}
+.ptabs button.me:not([aria-pressed=true]){box-shadow:inset 0 0 0 2px var(--teal)}
+.ptabs button[aria-pressed=true],.seg button[aria-pressed=true]{background:var(--teal);color:var(--on);box-shadow:0 2px 8px -2px rgba(8,38,52,.35)}
+.bar{height:10px;border-radius:99px;background:var(--line);overflow:hidden;margin:8px 0 0}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--teal);transition:width .3s}
+.feat summary .st{margin-left:auto;padding-right:10px;font-size:.8rem;color:var(--mute);white-space:nowrap}
+.feat summary .st.o{color:var(--ok)}.feat summary .st.g{color:var(--good)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;padding:0;list-style:none}
+.chips li{padding:4px 10px;border:1px solid var(--line);border-radius:99px;background:var(--bg);font-size:.8rem;font-weight:600}
+.lvup{margin:12px 0;padding:14px 16px;border:1px solid var(--good);border-radius:16px;background:var(--goodbg)}
+.lvup p{margin:0 0 10px}.lvup b{color:var(--good)}.lvup button{width:100%}
+.ckdown{margin-top:14px;width:100%}
 </style>
 </head>
 <body>
@@ -227,7 +246,7 @@ form.row button.go{background:var(--teal);color:var(--on)}
 <div class="tab" id="t-beaches" hidden><input id="sq" type="search" placeholder="Search beaches nearby, e.g. Fistral" aria-label="Search beaches nearby" autocomplete="off"><section class="card" id="spots" hidden></section><p class="empty">Search for a beach or town above to see nearby beaches.</p></div>
 <div class="tab" id="t-skills" hidden>
   <section class="card"><h3>Your level</h3><p>Your level decides what counts as good for you. Change it with the 1 to 5 buttons on Today, Week or Beaches.</p><button type="button" id="qbtn">Not sure of your level? Take the 1-minute quiz</button><div id="quiz" aria-live="polite"></div></section>
-  <section class="card"><h3>Progress checklists</h3><p>Coming soon: skills to tick off, drills to practise, level-ups and a “conditions felt too big” button.</p></section>
+  <section class="card"><h3>Progress checklists</h3><p id="pmsg" class="legend" role="status"></p><div id="prog"></div></section>
 </div>
 <div class="tab" id="t-more" hidden>
   <section class="card"><h3>Appearance</h3><div class="themes" id="themes" role="group" aria-label="Colour theme"></div></section>
@@ -262,6 +281,7 @@ const CONFIG = {
   hazard: {ripH:1.0, ripPeriod:9, longPeriod:12, onshoreMph:15, coldC:12, daylightHours:2},   // heads-up thresholds
   trust: ['high','high','medium','medium','low','low','low'],   // forecast confidence by days ahead
   drivePenaltyPerMin: 0.25,    // spot ranking: each drive minute costs this many score points
+  progress: {levelUpAt: 2},    // self-assessment every skill needs before a level-up: 0 not yet, 1 sometimes, 2 consistent
   exposure: {fullWithin: 45, shelteredFrom: 110, minShare: 0.15},  // swell angle vs beach facing
   spots: {probeKm: 1.2, max: 48},
   times: {any:['Any time',0,24], morning:['Morning',0,11], midday:['Midday',11,15], afternoon:['Afternoon',15,24]}  // time-of-day choices: label, from hour, to hour  // beach search: how far from each beach we look for sea to work out its angle, most beaches kept (the travel distance is set by the user)
@@ -341,6 +361,13 @@ const Engine = {
   wetsuit(c){
     return c>=22?'boardshorts or a rash guard':c>=17?'a 3/2 wetsuit':c>=12?'a 4/3 wetsuit with boots':'a 5/4 wetsuit with boots, gloves and a hood';
   },
+  levelDone(marks, ids){ return ids.every(id => (marks[id] || 0) >= CONFIG.progress.levelUpAt); },   // marks: {skillId: 0|1|2}
+  streak(days, today){   // days: day numbers with practice. Counts Monday-to-Sunday weeks in a row; stays alive while this week is still empty.
+    const wk = d => Math.floor((d + 3) / 7), s = new Set(days.map(wk));
+    let w = wk(today), n = 0; if (!s.has(w)) w--;
+    while (s.has(w)) { n++; w--; }
+    return n;
+  },
   selfTest(){
     const a=(c,m)=>console.assert(c,'FAIL: '+m);
     a(this.windType(270,90)==='offshore','offshore');
@@ -363,6 +390,8 @@ const Engine = {
     a(this.hazards(hx,1,{sst:9}).some(m=>/Cold/.test(m)),'cold water heads-up');
     a(this.hazards({...hx,windFrom:90,windMph:20},1).some(m=>/onshore/.test(m)),'onshore heads-up');
     a(this.hazards(hx,1,{hoursLeft:1}).some(m=>/daylight/.test(m)),'daylight heads-up');
+    a(this.levelDone({a:2,b:2},['a','b']) && !this.levelDone({a:2,b:1},['a','b']) && !this.levelDone({a:2},['a','b']),'level-up needs every skill consistent');
+    a(this.streak([100,93,86],100)===3 && this.streak([93,86],100)===2 && this.streak([100,79],100)===1 && this.streak([],100)===0,'weekly streak');
     console.log('Engine self-test done');
   }
 };
@@ -397,7 +426,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.20 · 22 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.21 · 22 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -977,6 +1006,106 @@ function startQuiz(){ qi = 0; ans = []; quizStep(); }
 $('qbtn').addEventListener('click', startQuiz);
 let sqT; $('sq').addEventListener('input', () => { clearTimeout(sqT); sqT = setTimeout(() => { if (data && spotsData) drawSpots(); }, 250); });   // search beaches by name
 
+/* ========= Progress checklists: skills for each level, self-assessed, saved on this device ========= */
+const GL = {rail:'The edge of your surfboard.', 'rip current':'A strong, narrow current that pulls water out to sea.', whitewater:'The foamy water left after a wave has broken.', 'green wave':'A wave that hasn’t broken yet: a smooth wall of water you ride along.', 'turtle roll':'Flipping upside down with the board on top of you so a wave passes over, then rolling back up.', 'duck dive':'Pushing the nose of a small board under a wave so you pass beneath it.', set:'A group of bigger waves that arrive one after another, with calmer gaps between groups.', lineup:'The area where surfers wait to catch waves.', 'close-out':'A wave that breaks all at once along its length, so there is no clear side to ride.', peak:'The spot where a wave first starts to break.', 'bottom turn':'The first turn at the bottom of a wave. It sets up the rest of your ride.'};
+const gl = s => s.replace(/\[\[(.+?)\]\]/g, (_, k) => term(k, GL[k]));   // [[word]] becomes a tap-for-meaning term
+const CHECKS = [   // one list per level; w = what it is, m = common mistakes, d = a drill. All skills on a level are needed to level up.
+ [{id:'l1-carry', t:'Carry and control your board', w:'Carry the board under one arm, holding the [[rail]], and keep it close so it can’t swing into anyone. In the water, always know where your board is.', m:'Letting go of the board in waves, carrying it flat so the wind catches it like a sail, and leaving it where people can trip over it.', d:'Carry your board from the car to the water and back. Then stand knee-deep and hold it steady while small waves roll past.'},
+  {id:'l1-paddle', t:'Paddle in a straight line', w:'Lie in the middle of the board with your chest up and the nose just above the water. Use long, deep strokes, one arm at a time.', m:'Lying too far back so the nose points up, too far forward so the nose dips, and short splashy strokes.', d:'In calm water, paddle 50 strokes in a straight line, then turn around and come back. Shuffle forward or back until the board sits level.'},
+  {id:'l1-popup', t:'Pop up in under 2 seconds', w:'The pop-up is the move from lying down to standing, in one smooth push. Hands flat by your chest, push up, and bring both feet under you with your knees bent and eyes forward.', m:'Going to your knees first, looking down at your feet, and standing up too straight, which makes you wobble.', d:'On the sand, do 10 pop-ups in a row and time them. Aim for under 2 seconds each, then do 5 more looking at the horizon.'},
+  {id:'l1-fall', t:'Fall safely', w:'When you fall, go flat or to the side, away from the board. Cover your head with your arms, and come up with a hand held above your head.', m:'Diving in head first, hanging on to the board, and coming up without protecting your head.', d:'In waist-deep water, practise falling off sideways, covering your head and standing up again. Do it 10 times.'},
+  {id:'l1-rip', t:'Know the flags and how to escape a rip', w:'Swim and surf between the red and yellow flags. A [[rip current]] often looks like a strip of choppy or foamy water heading out to sea. If one grabs you, stay calm, float or swim across it (not against it) until it eases, then head in. Wave an arm and shout if you need help.', m:'Swimming straight against the current until you’re worn out, and panicking.', d:'Read the Safety Center on the More tab, then explain it out loud to a friend. At your next beach, find the flags and look for any strip of different-looking water before you go in.'}],
+ [{id:'l2-catch', t:'Catch whitewater', w:'[[whitewater]] is the foamy part of a wave after it has broken. Face the beach, paddle hard as the foam reaches your tail, and keep paddling until you feel it pick the board up.', m:'Starting too late so the foam passes you, stopping paddling too soon, and pointing the nose off to one side.', d:'In waist-deep water, catch 10 foamy waves lying down. Count how many carry you all the way in.'},
+  {id:'l2-ride', t:'Stand up and ride it in', w:'Once the board is moving, pop up and stay low: knees bent, arms out, weight over the middle, eyes on the beach.', m:'Standing too tall, leaning back so the nose lifts, and looking down at your feet.', d:'Stand up on 5 of 10 whitewater waves and stay up until the foam fades. Then aim for 7 of 10.'},
+  {id:'l2-out', t:'Paddle out through whitewater', w:'Point the nose straight at the foam and keep paddling. For small foam, push up on your arms so it passes under the board. Wait for a gap between waves before you start.', m:'Turning side-on to the foam, which flips you, and paddling out right in front of someone riding in.', d:'Paddle out through 10 small foamy waves, with the nose straight at each one. Then do it with other people around, going wide of anyone riding in.'},
+  {id:'l2-look', t:'Look before every wave', w:'Before you take off, look left, right and behind for swimmers, other surfers and loose boards. If anyone is in your path, let the wave go.', m:'Watching only the wave, and catching a wave aimed straight at someone.', d:'For one whole session, look both ways before every wave. Let a wave go whenever it’s crowded.'}],
+ [{id:'l3-catch', t:'Catch green waves', w:'A [[green wave]] hasn’t broken yet, so you ride along its smooth face. Paddle toward the beach as it lifts your tail, take two or three more strokes, then pop up.', m:'Stopping paddling too soon so the wave slides under you, or taking off when it is already breaking over you.', d:'Sit just outside where the waves break. In one session, try to catch 10 waves and count how many you stand up on.'},
+  {id:'l3-turn', t:'Turn and ride along the wave', w:'Look where you want to go, then lean that way and put your weight on your back foot to turn. Riding along the wave, rather than straight to the beach, keeps you in the good part longer.', m:'Looking at the board instead of ahead, and leaning back so far that you lose speed.', d:'On each wave, angle left or right for a few seconds before it breaks. Aim for 5 rides in a row where you go sideways, not straight in.'},
+  {id:'l3-under', t:'Turtle roll or duck dive', w:'A [[turtle roll]] gets a foam board or longboard under an oncoming wave: grip the [[rail]]s, flip upside down with the board on top of you, let the wave pass, then roll back up. A [[duck dive]] does the same for a small board by pushing its nose under.', m:'Letting go of the board, rolling too late, and trying to duck dive a big foam board (it won’t sink).', d:'Practise turtle rolls in waist-deep water until you can flip, hold on and come back up calmly 5 times in a row. Then use it on real waves.'},
+  {id:'l3-set', t:'Read a set', w:'A [[set]] is a group of bigger waves that arrive together, with calmer gaps between them. Keep your eyes out to sea while you wait, and count the waves in each group.', m:'Facing the beach so the next set catches you by surprise, and paddling out just as a set arrives.', d:'Before you paddle out, watch the sea for 10 minutes. Count the waves in each group and how long the calm gap lasts, then say the pattern out loud.'},
+  {id:'l3-etiq', t:'Priority and etiquette', w:'The surfer closest to the [[peak]] has right of way. Never take off on a wave someone else is already riding, and if you’re unsure, let it go.', m:'Dropping in without looking, paddling for a wave someone else is already on, and hogging the peak.', d:'Take the etiquette quiz in the Tools on the More tab. In the water, look both ways before every wave, and speak up with a clear “mine” or “go” so nobody collides.'}],
+ [{id:'l4-sit', t:'Sit in the right spot', w:'The [[lineup]] is where surfers wait for waves. Line yourself up with a landmark on the beach (a building or flag), check it often, and paddle back when you drift.', m:'Drifting along the beach without noticing, sitting right where waves break, and getting in other surfers’ way.', d:'Pick two landmarks to line up with and check them every minute for a whole session.'},
+  {id:'l4-pick', t:'Pick the right waves', w:'Choose waves that steepen gradually and break to one side. Let go of a [[close-out]] or anything bigger than your level.', m:'Paddling for every wave, taking close-outs, and going for waves that are too big.', d:'For one session, only paddle for waves you’ve decided are good. Count how many you let pass and how many you catch.'},
+  {id:'l4-ride', t:'Ride along the wave', w:'Stay ahead of the breaking part. Lean forward to speed up, and shift your weight back to slow down or turn.', m:'Getting stuck behind the foam, and standing up too straight.', d:'Aim for rides of 5 seconds or more along the wave, on 3 waves in a session.'},
+  {id:'l4-out', t:'Paddle out through breaking waves', w:'Use a [[turtle roll]] or [[duck dive]] to get under waves instead of waiting for gaps. Start a few strokes before the wave reaches you.', m:'Starting too late, trying to push through at the last second, and paddling out right where people are riding in.', d:'Paddle out 5 times in a session with a turtle roll or duck dive, choosing your moment between [[set]]s.'},
+  {id:'l4-held', t:'Stay calm if you get held under', w:'In bigger waves a fall can keep you under for a few seconds. Relax, protect your head, and wait for the wave to let go before you swim up.', m:'Fighting the water, surfacing straight into the next wave, and panicking.', d:'Practise wipeouts in a lesson with a coach, or surf with a friend who’s watching from the beach. After each fall, take a breath and look for the next wave before you move.'}],
+ [{id:'l5-turn', t:'Link turns with speed', w:'Start with a [[bottom turn]], then use the speed to carry you along the wave. Press through your legs and look where you want to go next.', m:'Standing up too early, looking at your feet, and turning without speed.', d:'Do a bottom turn on every wave for a session and ask a friend to film you. Watch how your head and shoulders move.'},
+  {id:'l5-cond', t:'Read the conditions yourself', w:'Check the forecast, the tide and the wind, then look at the beach before you go in. Decide for yourself whether it suits your level, and be ready to skip.', m:'Trusting a forecast without looking, and ignoring a change in the wind or tide.', d:'Before each session, predict how it will look from the forecast. Compare it with what you see and note the gap in the session log.'},
+  {id:'l5-rip', t:'Spot channels and rips', w:'Channels are deeper gaps where water flows back out between the waves, and a strong [[rip current]] can pull you with it. Know where they are before you go in, and always know your way back to the beach.', m:'Paddling against a rip instead of across it, and surfing beside one without a way out.', d:'Watch from the beach for 10 minutes and point out each channel and rip. Ask a lifeguard to confirm.'},
+  {id:'l5-help', t:'Look out for others', w:'Learn basic first aid and how to help a tired surfer. Keep an eye on the people around you and know how to get help fast.', m:'Assuming someone else will call for help.', d:'Take a first-aid or surf rescue course, and agree a plan with your surf buddy before every session.'}]
+];
+const ST = [['○','Not yet',''],['~','Sometimes','o'],['✓','Consistent','g']];   // self-assessment: label and colour class
+let ckLevel = 1, ckSeen = null;   // ckLevel: the level whose list is showing (follows your level until you pick another)
+const ckOpen = new Set();         // skills left expanded, so a tap doesn’t collapse them
+const ckGet = () => { try { const o = JSON.parse(localStorage.getItem('sb-prog') || '{}'); return {s:o.s || {}, a:o.a || []}; } catch(e){ return {s:{}, a:[]}; } };
+const ckPut = o => { try { localStorage.setItem('sb-prog', JSON.stringify(o)); } catch(e){} };
+const dayNum = (y, m, d) => Date.UTC(y, m, d) / 864e5;
+const ckToday = () => { const n = new Date(); return [n.getFullYear(), n.getMonth(), n.getDate()]; };
+const ckLog = () => { try { return JSON.parse(localStorage.getItem('sb-log') || '[]'); } catch(e){ return []; } };
+function drawChecks(){
+  if (ckSeen !== level){ ckSeen = level; ckLevel = level; }
+  const st = ckGet(), pass = CONFIG.progress.levelUpAt, n = ckLevel, items = CHECKS[n-1], box = $('prog');
+  const doneL = k => Engine.levelDone(st.s, CHECKS[k-1].map(x => x.id));
+  const mark = x => st.s[x.id] || 0, got = items.filter(x => mark(x) >= pass).length, total = items.length;
+  const next = items.find(x => mark(x) < pass), name = CONFIG.levels[n-1].name;
+  const sessions = ckLog(), days = st.a.concat(sessions.map(x => x && x.d)).map(s => { const [y,m,d] = String(s).split('-').map(Number); return dayNum(y, m-1, d); }).filter(v => !isNaN(v));
+  const streak = Engine.streak(days, dayNum(...ckToday()));
+  const badges = [];
+  if (Object.values(st.s).some(v => v >= pass)) badges.push('First skill locked in');
+  [1,2,3,4,5].forEach(k => { if (doneL(k)) badges.push(CONFIG.levels[k-1].name + ' skills complete'); });
+  if (sessions.length >= 5) badges.push('5 sessions logged');
+  if (streak >= 4) badges.push('4-week streak');
+  const a = document.activeElement;   // keep keyboard focus on the same control after redrawing
+  const fk = a && box.contains(a) ? (a.dataset.v != null ? `[data-id="${a.dataset.id}"][data-v="${a.dataset.v}"]` : a.dataset.cl ? `[data-cl="${a.dataset.cl}"]` : null) : null;
+  const tabs = [1,2,3,4,5].map(k => `<button type="button" data-cl="${k}" class="${k === level ? 'me' : ''}" aria-pressed="${k === n}" aria-label="Level ${k}: ${CONFIG.levels[k-1].name}${k === level ? ', your level' : ''}${doneL(k) ? ', complete' : ''}">${k}${doneL(k) ? ' ✓' : ''}</button>`).join('');
+  const up = n !== level || got < total ? '' : n < 5
+    ? `<div class="lvup" id="lvup" tabindex="-1"><p><b>Level ${n} complete.</b> You’re consistent on every skill here. Level ${n+1} (${CONFIG.levels[n].name}) counts bigger waves and stronger wind as good for you. Only move up if you feel ready. You can drop back any time.</p><button type="button" class="go" id="ckup">Move up to level ${n+1}</button></div>`
+    : `<div class="lvup" id="lvup" tabindex="-1"><p><b>Intermediate skills complete.</b> You’ve finished this path. Keep logging sessions, and think about a lesson or coaching for your next step.</p></div>`;
+  const list = items.map(x => { const m = mark(x);
+    return `<details class="feat" data-id="${x.id}"${ckOpen.has(x.id) ? ' open' : ''}><summary><span>${x.t}</span><span class="st ${ST[m][2]}">${ST[m][0]} ${ST[m][1]}</span></summary><div>
+      <h4>What it is</h4><p>${gl(x.w)}</p><h4>Common mistakes</h4><p>${gl(x.m)}</p><h4>Drill</h4><p>${gl(x.d)}</p>
+      <h4>How are you doing?</h4><div class="seg" role="group" aria-label="Self-assessment: ${x.t}">${ST.map((s,v) => `<button type="button" data-id="${x.id}" data-v="${v}" aria-pressed="${v === m}">${s[0]} ${s[1]}</button>`).join('')}</div></div></details>`; }).join('');
+  box.innerHTML = `<div class="ptabs" role="group" aria-label="Choose a level">${tabs}</div>
+    <h4>Level ${n}: ${name}${n === level ? ' (your level)' : ''}</h4>
+    <p class="legend">${n < 5 ? `Get consistent at every skill here to move up to level ${n+1}, ${CONFIG.levels[n].name}.` : 'The last step on this path. Keep these sharp and keep logging sessions.'}</p>
+    <div class="bar" role="progressbar" aria-label="Skills consistent at level ${n}" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${got}"><i style="width:${got / total * 100}%"></i></div>
+    <p class="legend"><b>${got} of ${total}</b> skills consistent.${next ? ` Next up: <b>${next.t}</b>.` : ''}</p>
+    ${up}<div style="margin-top:8px">${list}</div>
+    <h4>Streak and badges</h4>
+    <p class="legend">${streak ? `Practice streak: <b>${streak} week${streak > 1 ? 's' : ''}</b> in a row.` : 'Log a session or update a skill to start a weekly streak.'} A week counts when you do either.</p>
+    ${badges.length ? `<ul class="chips">${badges.map(b => `<li>✓ ${b}</li>`).join('')}</ul>` : '<p class="legend">Lock in your first skill to earn a badge.</p>'}
+    <button type="button" class="ckdown" id="ckdown"${level <= 1 ? ' disabled' : ''}>Conditions felt too big</button>
+    <p class="legend">${level > 1 ? `Moves you down to level ${level-1}, ${CONFIG.levels[level-2].name}, straight away. Your skill ticks are kept.` : 'You’re already at the gentlest level.'}</p>`;
+  if (fk){ const el = box.querySelector(fk); if (el) el.focus({preventScroll:true}); }
+}
+function ckSetLevel(L, msg){   // L: the new level
+  level = L; try { localStorage.setItem('sb-level', level); } catch(e){}
+  drawLevels(); if (data) render();
+  $('pmsg').textContent = msg; drawChecks();
+}
+function ckMark(id, v){
+  const st = ckGet(), ids = CHECKS[ckLevel-1].map(x => x.id), was = Engine.levelDone(st.s, ids);
+  if ((st.s[id] || 0) === v) return;
+  st.s[id] = v;
+  const [y,m,d] = ckToday(), ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  if (!st.a.includes(ds)) st.a = st.a.concat(ds).slice(-200);
+  ckPut(st); drawChecks();
+  if (Engine.levelDone(st.s, ids) && !was){   // just finished the list: bring the level-up prompt into view
+    const u = $('lvup');
+    if (u){ u.focus({preventScroll:true}); u.scrollIntoView({block:'center', behavior: matchMedia('(prefers-reduced-motion:reduce)').matches ? 'auto' : 'smooth'}); }
+    else $('pmsg').textContent = `Level ${ckLevel} skills complete.`;
+  }
+}
+$('prog').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  $('pmsg').textContent = '';
+  if (b.dataset.cl){ ckLevel = +b.dataset.cl; drawChecks(); }
+  else if (b.dataset.v != null) ckMark(b.dataset.id, +b.dataset.v);
+  else if (b.id === 'ckup' && level < 5) ckSetLevel(level + 1, `Moved up to level ${level + 1}, ${CONFIG.levels[level].name}. Today, Week and Beaches now use it.`);
+  else if (b.id === 'ckdown' && level > 1) ckSetLevel(level - 1, `Moved down to level ${level - 1}, ${CONFIG.levels[level-2].name}. Today, Week and Beaches now use it. Your skill ticks are kept.`);
+});
+$('prog').addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.id){ if (d.open) ckOpen.add(d.dataset.id); else ckOpen.delete(d.dataset.id); } }, true);
+
 /* ===== Tabs: to add a feature, add one line to TABS and one <div class="tab" id="t-NAME" hidden> panel ===== */
 const ic = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const TABS = [
@@ -990,6 +1119,7 @@ function go(id){
   $('strip').hidden = !t.strip;
   $('nav').querySelectorAll('button').forEach(b => b.setAttribute('aria-current', b.dataset.t === t.id ? 'page' : 'false'));
   if (t.id === 'beaches' && data && spotsData) drawSpots();   // the map needs a visible box to size itself
+  if (t.id === 'skills') drawChecks();
   window.scrollTo(0, 0);
   try { history.replaceState(null, '', '#' + t.id); } catch(e){}
 }
