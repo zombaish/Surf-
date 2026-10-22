@@ -522,7 +522,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.36 · 22 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.35 · 22 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -1063,7 +1063,6 @@ async function reloadSpots(){
 const COMPASS = ['north','north-east','east','south-east','south','south-west','west','north-west'];
 const coastOf = s => COMPASS[Math.round((s.facing != null ? s.facing : bearing(center.lat, center.lon, s.lat, s.lon)) / 45) % 8] + ' coast';
 const windTxt = {offshore:'clean offshore wind', onshore:'choppy onshore wind', cross:'sideways wind'};
-const windShort = r => r.none || r.wind == null ? '' : `${fmtW(r.wind)} ${r.type === 'cross' ? 'cross-shore' : r.type} wind`;   // for beach cards and map popups
 function coastInfo(all){   // which coast is better, which to avoid
   const g = {};
   all.forEach(x => { const c = coastOf(x.s); (g[c] = g[c] || []).push(x); });
@@ -1125,7 +1124,7 @@ function drawSpots(){
     const shelter = r.none ? 'No suitable daylight window.' : s.facing == null ? 'Beach angle unclear, so ranked on size and wind only.' : r.e < 0.5 ? 'Sheltered from the swell, so smaller waves.' : r.e >= 0.9 ? 'Faces the swell head-on.' : 'Partly sheltered from the swell.';
     const wind = r.none ? '' : r.type==='offshore' ? ' Offshore wind keeps it clean.' : r.type==='onshore' ? ' Onshore wind makes it choppy.' : ' Wind blows along the beach.';
     const big = !r.none && r.h > CONFIG.levels[level-1].maxH ? ' ⚠ Bigger than level '+level+' should handle.' : '';
-    const cond = r.none ? '' : `<span class="ln">${roughFt(r.h)} waves (${Engine.bodyHeight(r.h)}) · ${Math.round(r.period)}s swell period${windShort(r) ? ' · ' + windShort(r) : ''}</span>`;
+    const cond = r.none ? '' : `<span class="ln">${roughFt(r.h)} waves (${Engine.bodyHeight(r.h)}) · ${Math.round(r.period)}s swell period</span>`;
     const when = r.none ? '' : `best ${hr(r.win[0].hour)} to ${hr(r.win[1].hour+1)} · `;
     const fav = isFav(s), note = fav && favs[favKey(s)].note;
     return `<div class="spotw"><button type="button" class="fav" data-fav="${favKey(s)}" aria-pressed="${fav}" aria-label="${fav ? 'Remove from favourites' : 'Add to favourites'}">${fav ? '★' : '☆'}</button><button type="button" class="spot" data-i="${i}"><b>${found ? '' : '#'+(i+1)+' '}${esc(s.name)}</b><span class="tag ${b}">${tag}</span>${cond}
@@ -1145,7 +1144,7 @@ function drawSpots(){
   const onMap = [...ranked, ...all.filter(x => !ranked.some(y => y.s === x.s))];   // the map shows every beach, the list only the top ones
   const COL = {g:'#17653f', o:'#7a4d00', r:'#a3201a'}, pills = L.layerGroup().addTo(map), m1 = map;
   const markers = onMap.map(({s,r}) => L.circleMarker([s.lat, s.lon], {radius:8, color:'#fff', weight:2, fillColor:COL[Engine.band(r.total)], fillOpacity:1}).addTo(map)
-    .bindPopup(`<b>${esc(s.name)}</b><br>${r.none ? '' : roughFt(r.h)+' waves · '+Math.round(r.period)+'s swell'+(windShort(r) ? ' · '+windShort(r) : '')+'<br>'}About ${s.min} min drive`));
+    .bindPopup(`<b>${esc(s.name)}</b><br>${r.none ? '' : roughFt(r.h)+' waves · '+Math.round(r.period)+'s swell<br>'}About ${s.min} min drive`));
   const drawPills = () => {   // wave labels: top 6 always, the rest only when zoomed in, never more than 40 on screen
     if (m1 !== map) return; pills.clearLayers();
     const z = map.getZoom(), bb = map.getBounds().pad(0.05); let n = 0;
