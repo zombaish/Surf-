@@ -81,6 +81,10 @@ select{display:block;width:100%;font:inherit;min-height:48px;border-radius:12px;
 button.link{min-height:0;border:0;background:none;color:var(--teal);text-decoration:underline;padding:4px 2px;font-weight:600}
 .cond{margin:12px 0 0;font-size:.85rem;color:var(--ink)}
 #inst [hidden]{display:none!important}
+.ch{margin:12px 0 0}.ch h4{margin:0 0 2px;font-size:.9rem}.ch svg{width:100%;height:auto;display:block}
+.ch text{fill:var(--mute);font-size:10px;font-family:inherit}.ch .gr{stroke:var(--line);stroke-width:1}.ch .nw{stroke:var(--mute);stroke-width:1.5;stroke-dasharray:3 3}
+.ch .ln{fill:none;stroke:var(--teal);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}.ch .pk{fill:var(--teal);stroke:var(--card);stroke-width:2}
+.ch .nt{fill:var(--ink);opacity:.08}.ch .bw{fill:var(--good);opacity:.22}
 .explain{margin-top:10px;color:var(--ink)}.explain summary{cursor:pointer;font-weight:700;padding:10px 0;min-height:44px;box-sizing:border-box}.explain p{margin:6px 0;font-size:.92rem}
 .reach{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px}.reach label{font-weight:600}
 #rn{flex:none;width:88px;min-width:0}#ru{display:inline-block;width:auto;margin:0;flex:1 1 150px}
@@ -518,7 +522,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.33 · 22 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.35 · 22 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -556,6 +560,39 @@ document.addEventListener('keydown', e => {
 
 const trustTxt = {high:'', medium:'Fairly reliable', low:'Less certain, check again closer to the day'};
 let wk = null, weekK = null;   // weekK: the day shown on the Week tab   // this week's per-day results, reused when the better/avoid advice is filled in
+/* One hourly line chart as inline SVG (no library). rows: a day's hourly rows. fmt shows a value in the person's units.
+   o: {title, zero: start the axis at 0, span: smallest axis range, best: [first, last] hour index of the best window} */
+function lineChart(rows, key, fmt, o){
+  const n = rows.length; if (n < 2) return '';
+  const real = rows.map(r => r[key]).filter(v => v != null); if (real.length < 2) return '';
+  let lo = Math.min(...real), hi = Math.max(...real);
+  if (o.zero) lo = Math.min(0, lo);
+  if (hi - lo < o.span){ if (o.zero) hi = lo + o.span; else { const m = (hi + lo) / 2; lo = m - o.span / 2; hi = m + o.span / 2; } }
+  const W = 360, H = 112, L = 44, R = 10, T = 14, B = 22, w = W - L - R, h = H - T - B, step = w / (n - 1);
+  const x = i => L + i * step, y = v => T + h - (v - lo) / (hi - lo) * h, f = v => Math.round(v * 10) / 10;
+  const band = (i0, i1, cls) => `<rect class="${cls}" x="${f(Math.max(L, x(i0) - step / 2))}" y="${T}" width="${f(Math.min(L + w, x(i1) + step / 2) - Math.max(L, x(i0) - step / 2))}" height="${h}"/>`;
+  let shade = '', i = 0;
+  while (i < n){ if (!rows[i].daylight){ let j = i; while (j + 1 < n && !rows[j + 1].daylight) j++; shade += band(i, j, 'nt'); i = j + 1; } else i++; }
+  if (o.best) shade += band(o.best[0], o.best[1], 'bw');
+  let d = '', pen = false;   // a gap in the data breaks the line
+  rows.forEach((r, k) => { const v = r[key]; if (v == null){ pen = false; return; } d += (pen ? 'L' : 'M') + f(x(k)) + ' ' + f(y(v)); pen = true; });
+  const pk = rows.reduce((a, r, k) => r[key] != null && (a < 0 || r[key] > rows[a][key]) ? k : a, -1);
+  const ticks = rows.map((r, k) => r.hour % 6 === 0 ? `<text x="${f(x(k))}" y="${H - 6}" text-anchor="middle">${hr(r.hour)}</text>` : '').join('');
+  const nowI = rows.findIndex(r => !r.past), now = nowI > 0 ? `<line class="nw" x1="${f(x(nowI))}" x2="${f(x(nowI))}" y1="${T}" y2="${T + h}"/>` : '';
+  const aria = `${o.title}. Lowest ${fmt(Math.min(...real))}, highest ${fmt(Math.max(...real))} at ${hr(rows[pk].hour)}.`;
+  return `<div class="ch"><h4>${o.title}</h4><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(aria)}">${shade}
+    <line class="gr" x1="${L}" x2="${L + w}" y1="${T}" y2="${T}"/><line class="gr" x1="${L}" x2="${L + w}" y1="${T + h}" y2="${T + h}"/>
+    <text x="${L - 4}" y="${T + 4}" text-anchor="end">${fmt(hi)}</text><text x="${L - 4}" y="${T + h + 4}" text-anchor="end">${fmt(lo)}</text>
+    ${now}<path class="ln" d="${d}"/><circle class="pk" cx="${f(x(pk))}" cy="${f(y(rows[pk][key]))}" r="4"/>${ticks}</svg></div>`;
+}
+function dayCharts(d, r){   // waves, wind and tide for one day; r = that day's best window (or null)
+  const rows = d.rows, i0 = r ? rows.indexOf(r.from) : -1, i1 = r ? rows.indexOf(r.to) : -1, best = i0 >= 0 && i1 >= 0 ? [i0, i1] : null;
+  const per = rows.filter(x => x.period != null).map(x => x.period);
+  return lineChart(rows, 'h', fmtH, {title:'Wave height', zero:true, span:0.5, best})
+    + (per.length ? `<p class="legend" style="margin:0 0 6px">Swell period ${Math.round(Math.min(...per))} to ${Math.round(Math.max(...per))} seconds.</p>` : '')
+    + lineChart(rows, 'windMph', fmtW, {title:'Wind speed', zero:true, span:10, best})
+    + lineChart(rows, 'tide', fmtTide, {title:'Tide (estimate)', span:1, best});
+}
 function weekHTML(){
   if (!data.days || data.days.length < 2) return '';
   const res = data.days.map(d => Engine.dayBest(d.rows, level, inWhen));
@@ -586,7 +623,9 @@ function weekHTML(){
   return `<section class="card"><h3>Pick a day (level ${level}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()})</h3>
     <div class="daychips" role="group" aria-label="Day">${chips}</div>
     <ul class="days">${lis[sel]}</ul>
-    <p class="legend">Best two-hour daylight window, scored for your level at the forecast point on Today. Forecasts get less certain the further ahead they look.</p></section>`;
+    <p class="legend">Best two-hour daylight window, scored for your level at the forecast point on Today. Forecasts get less certain the further ahead they look.</p></section>`
+    + (data.days[sel].rows.some(x => x.h != null) ? `<section class="card"><h3>Hour by hour, ${data.days[sel].date ? dayName(data.days[sel].date, true) : 'this day'}</h3>${dayCharts(data.days[sel], res[sel])}
+    <p class="legend">Green band = best window for your level. Grey = night. Dashed line = now. The dot marks the highest point. Tide heights and times are model estimates, so check a tide table.</p></section>` : '');
 }
 function drawWeek(){
   $('week').innerHTML = weekHTML();
@@ -1111,8 +1150,8 @@ function drawSpots(){
     const z = map.getZoom(), bb = map.getBounds().pad(0.05); let n = 0;
     onMap.forEach(({s,r},i) => { if (n >= 40 || !(i < 6 || z >= 11) || !bb.contains([s.lat, s.lon])) return; n++;
       const b = Engine.band(r.total);
-      L.marker([s.lat, s.lon], {interactive:false, zIndexOffset:1000-i, icon:L.divIcon({className:'', iconSize:[96,24], iconAnchor:[48,12],
-        html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'✕'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`})}).addTo(pills); });
+      L.marker([s.lat, s.lon], {interactive:true, keyboard:false, zIndexOffset:1000-i, icon:L.divIcon({className:'', iconSize:[96,24], iconAnchor:[48,12],
+        html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'✕'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`})}).on('click', () => markers[i].openPopup()).addTo(pills); });   // the label sits over the dot, so tapping the label opens the same beach popup
   };
   map.on('moveend zoomend', drawPills);
   const m0 = map;
