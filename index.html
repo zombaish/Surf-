@@ -230,27 +230,22 @@ body.fs-lock{overflow:hidden}
 .card.feat{border-top:1px solid var(--line)}.card.feat>h3{margin:0 0 6px}.card.feat>div{padding:0}
 #kitseg{grid-template-columns:repeat(3,1fr);margin-bottom:6px}#t-kit [hidden],#t-skills [hidden]{display:none!important}
 .spotw{position:relative}.spotw .spot{padding-right:58px}.fav{position:absolute;top:10px;right:6px;width:46px;height:46px;min-height:46px;padding:0;border:0;background:none;font-size:1.6rem;line-height:1;color:#c98a00}.fav[aria-pressed=true]{color:#e0a800}
-/* ===== Report tab (Surfline-style dashboard) ===== */
-#rep h2{margin:0;font-size:1.5rem;font-weight:800;letter-spacing:-.02em}
-.rrate{display:flex;align-items:center;gap:12px;margin:8px 0 14px;font-size:1.5rem;font-weight:800;letter-spacing:-.01em}
-.rrate.good{color:var(--good)}.rrate.ok{color:var(--ok)}.rrate.bad{color:var(--bad)}
-.rbar{display:flex;gap:4px}.rbar i{display:block;width:30px;height:8px;border-radius:4px;background:var(--line)}.rbar i.on{background:currentColor}
-.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.rc{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;min-width:0;box-shadow:0 1px 2px rgba(8,38,52,.05),0 12px 28px -16px rgba(8,38,52,.25)}
-.rc.wide{grid-column:1/-1}
-.rc .k{margin:0 0 6px;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
-.rc .big{margin:0;font-size:1.9rem;font-weight:800;letter-spacing:-.03em;line-height:1.1}
-.rc .big small{font-size:1rem;font-weight:700;letter-spacing:0}
-.rc .sm{margin:6px 0 0;font-size:.9rem;font-weight:600}
-.rc .src{margin:10px 0 0;font-size:.72rem;color:var(--mute)}
-.dial{width:100%;max-width:170px;height:auto;display:block;margin:0 auto}
-.dial circle{fill:none;stroke:var(--line);stroke-width:1.5}
-.dial text{fill:var(--mute);font-size:8px;font-weight:700;text-anchor:middle}
-.dial .sw{fill:var(--teal)}.dial .wd{fill:var(--mute)}
-.dkey{margin:6px 0 0;font-size:.72rem;color:var(--mute);text-align:center}
-.ch .ar{fill:var(--teal);opacity:.14}
-.ch .nowdot{fill:var(--ink);stroke:var(--card);stroke-width:2}
-@media (max-width:400px){#nav button{font-size:.62rem}}
+/* ===== v0.37 Report tab ===== */
+#report:empty::before{content:'Search for a beach or town above to see its surf report.';display:block;color:var(--mute);padding:12px 0}
+.rep-hd{margin:2px 2px 8px;font-size:.85rem;color:var(--mute)}
+.rate{border-radius:18px;padding:16px 18px;border:1px solid;margin:0 0 12px}
+.rate.good{background:var(--goodbg);color:var(--good);border-color:var(--good)}
+.rate.ok{background:var(--okbg);color:var(--ok);border-color:var(--ok)}
+.rate.bad{background:var(--badbg);color:var(--bad);border-color:var(--bad)}
+.rate h2{margin:0;font-size:1.35rem;font-weight:800;letter-spacing:-.02em}
+.rate p{margin:4px 0 0;font-size:.85rem;color:var(--ink)}
+.segs{display:flex;gap:4px;margin:10px 0 0}.segs i{flex:1;height:8px;border-radius:99px;background:currentColor;opacity:.22}.segs i.on{opacity:1}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}
+.rc{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px}
+.rc .k{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.rc .big{font-size:1.7rem;font-weight:800;letter-spacing:-.03em;line-height:1.15;margin:6px 0 2px}
+.rc .big small{font-size:.9rem;font-weight:700;letter-spacing:0}
+.rc p{margin:0;font-size:.9rem}
 </style>
 </head>
 <body>
@@ -282,9 +277,9 @@ body.fs-lock{overflow:hidden}
 </div>
 
 <div class="tab" id="t-today"><div id="out" aria-live="polite"></div><p class="note">Forecasts are estimates. Always check with local lifeguards and signage.</p></div>
+<div class="tab" id="t-report" hidden><div id="report" aria-live="polite"></div></div>
 <div class="tab" id="t-week" hidden><div id="week"></div></div>
 <div class="tab" id="t-beaches" hidden><input id="sq" type="search" placeholder="Search beaches nearby, e.g. Fistral" aria-label="Search beaches nearby" autocomplete="off"><select id="bsel" aria-label="Pick any beach nearby" hidden></select><section class="card" id="spots" hidden></section><p class="empty">Search for a beach or town above to see nearby beaches.</p></div>
-<div class="tab" id="t-report" hidden><div id="rep" aria-live="polite"></div></div>
 <div class="tab" id="t-skills" hidden>
   <div class="whens" id="skseg" role="group" aria-label="Skills sections" style="grid-template-columns:repeat(2,1fr);margin-bottom:6px"><button type="button" aria-pressed="true" data-k="main">My level and progress</button><button type="button" aria-pressed="false" data-k="learn">Learn</button></div>
   <div id="sk-main">
@@ -544,7 +539,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.36 · 22 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.37 · 22 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -678,7 +673,7 @@ function render(){
   if (data.days){ const k = dayK ?? data.defK; Object.assign(data, data.days[k], {k}); }   // load the chosen day into data
   const {rows} = data;
   const usable = rows.filter(r => !r.past && r.h != null);
-  if (!usable.length) { $('out').innerHTML = `<div class="err">No marine data for this spot. Try a beach or coastal town.</div>`; return; }
+  if (!usable.length) { $('report').innerHTML = ''; $('out').innerHTML = `<div class="err">No marine data for this spot. Try a beach or coastal town.</div>`; return; }
   const mine = bestFor(level), l1 = bestFor(1), l3 = bestFor(3);
   let cls, title;
   if (l1.b.avg >= CONFIG.goodAt){ cls='good'; title='Good for beginners'; }
@@ -744,11 +739,36 @@ function render(){
     <dt>Tide</dt><dd>${tideTxt()}</dd>
     <dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></dl>${data.tides && data.tides.length ? '<p class="legend">Tides are model estimates from hourly data, so times can be an hour or so out, and heights are against mean sea level. Check a local tide table.</p>' : ''}</section>`;
   const ub = $('upd'); if (ub) ub.onclick = () => run(center.lat, center.lon, place);
-  if (!$('t-report').hidden) drawReport();
   drawWeek();
+  drawReport();
   drawSpots();
 }
 
+/* ========= Report tab: current conditions at a glance, built from the same forecast rows ========= */
+const compass = d => ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(d / 22.5) % 16];
+function reportRow(){   // the hour the report describes: this hour today, midday on another day
+  const rows = data.rows.filter(r => !r.past && r.h != null && r.windMph != null);
+  if (!rows.length) return null;
+  return data.k === 0 ? rows[0] : (rows.find(r => r.hour === 12) || rows.find(r => r.daylight) || rows[0]);
+}
+function drawReport(){
+  const el = $('report'), r = data && reportRow(), s = r && Engine.score({...r, daylight:true}, level);
+  if (!s){ el.innerHTML = ''; return; }
+  const band = Engine.band(s.total), cls = {g:'good', o:'ok', r:'bad'}[band];
+  const word = {g:'✓ Good for level ' + level, o:'~ Marginal for level ' + level, r:'○ Not ideal for level ' + level}[band];
+  const on = s.total > 0 ? Math.max(1, Math.ceil(s.total / 20)) : 0;
+  const lab = data.k === 0 ? 'Now, ' + hr(r.hour) : data.label.charAt(0).toUpperCase() + data.label.slice(1) + ', ' + hr(r.hour);
+  const type = {offshore:'Offshore', onshore:'Onshore', cross:'Cross-shore'}[s.type];
+  el.innerHTML = `<p class="rep-hd">Surf report for <b>${esc(place || '')}</b> · ${esc(lab)}</p>
+  <div class="rate ${cls}" role="status"><h2>${word}</h2>
+    <div class="segs" aria-hidden="true">${[1,2,3,4,5].map(n => `<i${n <= on ? ' class="on"' : ''}></i>`).join('')}</div>
+    <p>Score ${s.total} out of 100 for level ${level}.${r.daylight ? '' : ' It is dark at this hour.'}</p></div>
+  <div class="rgrid">
+    <div class="rc"><div class="k">Surf</div><div class="big">${fmtH(r.h)}</div><p>${Engine.bodyHeight(r.h).replace(/^./, c => c.toUpperCase())}</p></div>
+    <div class="rc"><div class="k">Wind</div><div class="big">${fmtW(r.windMph)} <small>${compass(r.windFrom)}</small></div><p>${type}</p></div>
+  </div>
+  <p class="legend">Rated for your level, not for expert surfers. Same forecast as the Today tab.</p>`;
+}
 const R_ = Math.PI / 180;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hav = (a,b,c,d) => { const x=(c-a)*R_, y=(d-b)*R_, q=Math.sin(x/2)**2+Math.cos(a*R_)*Math.cos(c*R_)*Math.sin(y/2)**2; return 12742*Math.asin(Math.sqrt(q)); };
@@ -880,7 +900,7 @@ function showSaved(c){   // show the saved forecast for a place, with a banner s
 async function run(lat, lon, name){
   const id = ++runId; spotRun++; showN = 5;
   triedQ.clear(); enrichRun++; place = name; center = {lat, lon}; data = null; dayK = null; weekK = null; $('sq').value = ''; spotsData = null; spotsMsg = ''; fcFrom = null; savedAt = null;
-  $('out').innerHTML = '<div class="skel" aria-label="Loading"></div>';
+  $('out').innerHTML = '<div class="skel" aria-label="Loading"></div>'; $('report').innerHTML = '';
   $('spots').hidden = false; drawSpots();
   const fcP = loadForecast(lat, lon).then(d => ({d}), e => ({e}));
   const spP = Promise.race([findSpots(lat, lon), new Promise((_, rej) => setTimeout(() => rej(new Error('timed out')), 35000))]).then(l => ({l}), e => ({e}));
@@ -1484,99 +1504,10 @@ $('prog').addEventListener('click', e => {
 });
 $('prog').addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.id){ if (d.open) ckOpen.add(d.dataset.id); else ckOpen.delete(d.dataset.id); } }, true);
 
-/* ===== Report tab: a dashboard of cards (rating, surf, wind, swell, tide, water, weather). Own data, own design. ===== */
-let rep = null, repKey = '', repSeq = 0;
-const DIRS16 = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-const dirTxt = d => d == null ? '' : DIRS16[Math.round((((d % 360) + 360) % 360) / 22.5) % 16];
-const gv = (a, i) => a ? a[i] : null;
-async function loadReport(lat, lon){   // hourly sea and weather for 7 days; null = no wave data at this point
-  const [m, w] = await Promise.all([
-    get(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,swell_wave_direction,sea_surface_temperature,sea_level_height_msl&cell_selection=sea&timezone=auto&forecast_days=7`).catch(() => null),
-    get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,wind_speed_10m,wind_gusts_10m,wind_direction_10m,uv_index,weather_code&daily=sunrise,sunset&wind_speed_unit=mph&timezone=auto&forecast_days=7`)
-  ]);
-  if (!m || !m.hourly) return null;
-  const off = w.utc_offset_seconds || 0, now = new Date(Date.now() + off * 1000).toISOString().slice(0, 13);
-  const sun = {}; w.daily.time.forEach((d, k) => { sun[d] = {rise:w.daily.sunrise[k], set:w.daily.sunset[k]}; });
-  const H = m.hourly, W = w.hourly;
-  const rows = H.time.map((t, i) => { const j = W.time.indexOf(t);
-    return {t, date:t.slice(0, 10), hour:+t.slice(11, 13), h:H.wave_height[i], period:H.wave_period[i], dir:H.wave_direction[i],
-      sh:gv(H.swell_wave_height, i), sp:gv(H.swell_wave_period, i), sd:gv(H.swell_wave_direction, i), sst:H.sea_surface_temperature[i], tide:gv(H.sea_level_height_msl, i),
-      temp:j >= 0 ? W.temperature_2m[j] : null, wind:j >= 0 ? W.wind_speed_10m[j] : null, gust:j >= 0 ? W.wind_gusts_10m[j] : null,
-      wdir:j >= 0 ? W.wind_direction_10m[j] : null, uv:j >= 0 ? W.uv_index[j] : null, code:j >= 0 ? W.weather_code[j] : null}; });
-  let i = rows.findIndex(r => r.t.slice(0, 13) >= now); if (i < 0) i = 0;
-  if (rows[i].h == null || rows[i].wind == null) return null;
-  return {rows, i, sun};
-}
-async function drawReport(){
-  const box = $('rep'); if (!box) return;
-  if (!center){ box.innerHTML = '<p class="empty">Search for a beach or town above to see its surf report.</p>'; return; }
-  const my = ++repSeq, k = center.lat.toFixed(2) + ',' + center.lon.toFixed(2);
-  if (repKey !== k){
-    box.innerHTML = '<div class="skel" aria-label="Loading"></div>';
-    try { const r = await loadReport(center.lat, center.lon); if (my !== repSeq) return; rep = r; repKey = k; }
-    catch(e){ if (my !== repSeq) return; box.innerHTML = `<div class="err">Couldn’t load the report (${esc(e.message)}). <button type="button" id="repRetry">Try again</button></div>`; $('repRetry').onclick = drawReport; return; }
-  }
-  box.innerHTML = rep ? reportHTML(rep) : '<div class="err">No wave data at this spot. Try a beach or coastal town.</div>';
-}
-const rangeTxt = h => {   // a surf-report style range around the forecast height
-  const lo = h * 0.75, hi = h * 1.25;
-  if (UNITS.len === 'm') return `${lo.toFixed(1)}-${hi.toFixed(1)}<small>m</small>`;
-  const a = Math.max(0, Math.round(lo / 0.3048)), b = Math.max(a + 1, Math.round(hi / 0.3048)); return `${a}-${b}<small>ft</small>`;
-};
-const bodyRange = h => { const a = Engine.bodyHeight(h * 0.75), b = Engine.bodyHeight(h * 1.25); return a === b ? a : `${a} to ${b}`; };
-function dialSVG(swFrom, wdFrom){   // compass: arrows start at the side the swell or wind comes from and point inward
-  const arr = (deg, cls, d) => deg == null ? '' : `<g transform="rotate(${Math.round(deg)} 60 60)"><path class="${cls}" d="${d}"/></g>`;
-  return `<svg class="dial" viewBox="0 0 120 120" role="img" aria-label="Compass: swell from ${dirTxt(swFrom)}${wdFrom != null ? ', wind from ' + dirTxt(wdFrom) : ''}">
-    <circle cx="60" cy="60" r="38"/><circle cx="60" cy="60" r="24" stroke-dasharray="2 4"/>
-    <text x="60" y="15">N</text><text x="107" y="63">E</text><text x="60" y="114">S</text><text x="13" y="63">W</text>
-    ${arr(swFrom, 'sw', 'M60 56 L67 44 L62 45 L62 24 L58 24 L58 45 L53 44 Z')}${arr(wdFrom, 'wd', 'M60 50 L65 42 L62 43 L62 28 L58 28 L58 43 L55 42 Z')}</svg>`;
-}
-function tideSVG(r){   // today's tide curve with highs, lows and a "now" dot
-  const x0 = r.rows[r.i], day = r.rows.filter(x => x.date === x0.date && x.tide != null); if (day.length < 4) return '';
-  const W = 320, H = 130, L = 8, R = 8, T = 30, B = 22, n = day.length, v = day.map(x => x.tide);
-  const lo = Math.min(...v), hi = Math.max(...v), px = i => L + i * (W - L - R) / (n - 1), py = t => T + (H - T - B) * (1 - (t - lo) / ((hi - lo) || 1)), f = t => Math.round(t * 10) / 10;
-  const line = day.map((x, i) => (i ? 'L' : 'M') + f(px(i)) + ' ' + f(py(x.tide))).join('');
-  const area = line + `L${f(px(n - 1))} ${H - B}L${f(px(0))} ${H - B}Z`;
-  let marks = '';
-  for (let i = 1; i < n - 1; i++){ const a = v[i - 1], b = v[i], c = v[i + 1], hiT = b > a && b >= c, loT = b < a && b <= c; if (!hiT && !loT) continue;
-    const ax = px(i), anc = ax < 50 ? 'start' : ax > W - 50 ? 'end' : 'middle', yy = hiT ? py(b) - 8 : py(b) + 14;
-    marks += `<line class="gr" x1="${f(ax)}" x2="${f(ax)}" y1="${f(py(b))}" y2="${H - B}"/><text x="${f(ax)}" y="${f(yy - (hiT ? 10 : 0))}" text-anchor="${anc}" style="fill:var(--ink);font-weight:700">${hr(day[i].hour)}</text><text x="${f(ax)}" y="${f(yy)}" text-anchor="${anc}">${hiT ? 'High' : 'Low'} ${fmtTide(b)}</text>`; }
-  const ni = day.findIndex(x => x.t === x0.t), now = ni >= 0 ? `<circle class="nowdot" cx="${f(px(ni))}" cy="${f(py(v[ni]))}" r="5"/>` : '';
-  const ticks = day.map((x, i) => x.hour % 6 === 0 ? `<text x="${f(px(i))}" y="${H - 6}" text-anchor="middle">${hr(x.hour)}</text>` : '').join('');
-  return `<div class="ch"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Tide today: lowest ${fmtTide(lo)}, highest ${fmtTide(hi)}."><path class="ar" d="${area}"/><path class="ln" d="${line}"/>${marks}${now}${ticks}</svg></div>`;
-}
-const WX = c => c == null ? ['', 'Weather'] : c === 0 ? ['☀', 'Clear'] : c <= 2 ? ['⛅', 'Mostly clear'] : c === 3 ? ['☁', 'Cloudy'] : c <= 48 ? ['🌫', 'Fog'] : c <= 67 || (c >= 80 && c <= 82) ? ['🌧', 'Rain'] : c <= 77 ? ['❄', 'Snow'] : ['⛈', 'Storm'];
-const WIND_NAME = {offshore:'Offshore', onshore:'Onshore', cross:'Cross-shore'};
-function reportHTML(r){
-  const x = r.rows[r.i], nx = r.rows[r.i + 1], sun = r.sun[x.date];
-  const inp = {h:x.h, period:x.period, windMph:x.wind, windFrom:x.wdir, waveFrom:x.dir, daylight:true};
-  const sc = Engine.score(inp, level), ex = Engine.explain(inp, level);
-  const band = Engine.band(sc.total), cls = {g:'good', o:'ok', r:'bad'}[band], word = {g:'Good', o:'Fair', r:'Poor'}[band];
-  const bars = Math.min(5, Math.max(1, Math.ceil(sc.total / 20)));
-  const sizeNote = x.h > CONFIG.levels[level - 1].maxH ? `<p class="sm" style="color:var(--bad)">⚠ Bigger than level ${level} should handle.</p>` : '';
-  const hasSw = x.sh != null && x.sp != null && x.sd != null;
-  const sH = hasSw ? x.sh : x.h, sP = hasSw ? x.sp : x.period, sD = hasSw ? x.sd : x.dir;
-  const up = nx && nx.tide != null && x.tide != null ? nx.tide > x.tide : null;
-  const [wi, wt] = WX(x.code), uv = x.uv == null ? 0 : x.uv;
-  const sunTxt = uv >= 8 ? 'Very high UV: SPF 50, hat and shade' : uv >= 3 ? 'Use SPF 50' : 'Low UV, still wear sun cream';
-  return `<h2>${esc(place)}</h2><p class="legend" style="margin:2px 0 0">Surf report for ${hr(x.hour)}, rated for level ${level}${sun ? ' · sunrise ' + sun.rise.slice(11, 16) + ', sunset ' + sun.set.slice(11, 16) : ''}</p>
-  <div class="rrate ${cls}" role="status"><span>${{g:'✓',o:'~',r:'○'}[band]} ${word.toUpperCase()}</span><span class="rbar" role="img" aria-label="${bars} out of 5">${[1,2,3,4,5].map(k => `<i class="${k <= bars ? 'on' : ''}"></i>`).join('')}</span></div>
-  <div class="rgrid">
-   <section class="rc"><p class="k">Surf</p><p class="big">${rangeTxt(x.h)}</p><p class="sm">${bodyRange(x.h)}</p>${sizeNote}<p class="src">Model estimate, ${fmtH(x.h)} average</p></section>
-   <section class="rc"><p class="k">Wind</p><p class="big">${fmtW(x.wind)} <small>${dirTxt(x.wdir)}</small></p><p class="sm">${x.gust != null ? fmtW(x.gust) + ' gusts, ' : ''}${WIND_NAME[sc.type]}</p><p class="src">Judged against the swell direction</p></section>
-   <section class="rc"><p class="k">Swell</p><p class="big">${fmtH(sH).replace(' ', '<small> ') + '</small>'}</p><p class="sm">${Math.round(sP)}s · ${dirTxt(sD)} ${Math.round(sD)}°</p><p class="src">${hasSw ? 'Main swell' : 'All waves (no swell split here)'}</p></section>
-   <section class="rc"><p class="k">Compass</p>${dialSVG(sD, x.wdir)}<p class="dkey">● swell from ${dirTxt(sD)} &nbsp; ● wind from ${dirTxt(x.wdir)}</p></section>
-   <section class="rc wide"><p class="k">Tide</p>${x.tide != null ? `<p class="big">${fmtTide(x.tide)} <small>${up == null ? '' : up ? '▲ rising' : '▼ falling'}</small></p>${tideSVG(r)}<p class="src">Model estimate from sea level data. Check a local tide table.</p>` : '<p class="sm">Not available here.</p>'}</section>
-   <section class="rc"><p class="k">Water temperature</p><p class="big">${x.sst != null ? fmtT(x.sst) : '–'}</p><p class="sm">${x.sst != null ? 'Wear ' + Engine.wetsuit(x.sst) : 'Not available'}</p></section>
-   <section class="rc"><p class="k">Weather</p><p class="big">${x.temp != null ? fmtT(x.temp) : '–'}</p><p class="sm">${wi} ${wt}</p><p class="src">${sunTxt}</p></section>
-   ${ex ? `<section class="rc wide"><details class="explain" style="margin:0"><summary>Explain this rating</summary><p>Score ${ex.total} out of 100 for level ${level}.</p><ul>${ex.lines.map(l => `<li><b>${l.name}</b>: ${l.score}/100. ${l.text}</li>`).join('')}</ul>${ex.drag ? `<p>Biggest thing holding it back: <b>${ex.drag.toLowerCase()}</b>.</p>` : ''}</details></section>` : ''}
-  </div><p class="note">Forecasts are estimates from Open-Meteo marine and weather models. Always check with local lifeguards and signage.</p>`;
-}
-
 /* ===== Tabs: to add a feature, add one line to TABS and one <div class="tab" id="t-NAME" hidden> panel ===== */
 const ic = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const TABS = [
-  {id:'today', label:'Today', icon:ic('<circle cx="12" cy="6.5" r="2.5"/><path d="M2 13c2.5 0 2.5-2.5 5-2.5S9.5 13 12 13s2.5-2.5 5-2.5S19.5 13 22 13M2 18.5c2.5 0 2.5-2.5 5-2.5s2.5 2.5 5 2.5 2.5-2.5 5-2.5 2.5 2.5 5 2.5"/>'), strip:true}, {id:'report', label:'Report', icon:ic('<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>'), strip:true}, {id:'week', label:'Week', icon:ic('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'), strip:true},
+  {id:'today', label:'Today', icon:ic('<circle cx="12" cy="6.5" r="2.5"/><path d="M2 13c2.5 0 2.5-2.5 5-2.5S9.5 13 12 13s2.5-2.5 5-2.5S19.5 13 22 13M2 18.5c2.5 0 2.5-2.5 5-2.5s2.5 2.5 5 2.5 2.5-2.5 5-2.5 2.5 2.5 5 2.5"/>'), strip:true}, {id:'report', label:'Report', icon:ic('<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/>'), strip:true}, {id:'week', label:'Week', icon:ic('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'), strip:true},
   {id:'beaches', label:'Beaches', icon:ic('<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'), strip:true}, {id:'skills', label:'Skills', icon:ic('<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>')}, {id:'kit', label:'Kit & log', icon:ic('<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M9 8V6a3 3 0 0 1 6 0v2M4 13h16"/>')}, {id:'more', label:'More', icon:ic('<circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/>')}];
 $('nav').innerHTML = TABS.map(t => `<button type="button" data-t="${t.id}"><span aria-hidden="true">${t.icon}</span>${t.label}</button>`).join('');
 $('nav').addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(b.dataset.t); });
@@ -1587,7 +1518,6 @@ function go(id){
   $('nav').querySelectorAll('button').forEach(b => b.setAttribute('aria-current', b.dataset.t === t.id ? 'page' : 'false'));
   if (t.id === 'beaches' && data && spotsData) drawSpots();   // the map needs a visible box to size itself
   if (t.id === 'skills') drawChecks();
-  if (t.id === 'report') drawReport();
   if (t.id === 'kit' && $('gt')) gearOpen();   // the panel is built a little further down on first load
   window.scrollTo(0, 0);
   try { history.replaceState(null, '', '#' + t.id); } catch(e){}
