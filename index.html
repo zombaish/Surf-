@@ -113,6 +113,10 @@ abbr[data-def]{cursor:pointer}
 #nav button[aria-current=page]{color:var(--teal);box-shadow:inset 0 3px 0 var(--teal)}
 #out:empty::before,#week:empty::before{content:'Search for a beach or town above, or tap Use my location.';display:block;color:var(--mute);padding:12px 0}
 .empty{color:var(--mute)}#spots:not([hidden]) + .empty{display:none}
+#sq{width:100%;box-sizing:border-box;min-height:48px;padding:0 14px;font-size:1rem;border:2px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);margin:0 0 12px}
+.daychips .m{display:block;font-size:.8rem;font-weight:700}.daychips .m.g{color:var(--good)}.daychips .m.o{color:var(--ok)}.daychips .m.r{color:var(--bad)}
+.daychips button[aria-pressed=true] .m{color:inherit}
+details.more summary{cursor:pointer;color:var(--mute);padding:8px 0;font-size:.85rem}
 </style>
 </head>
 <body>
@@ -138,7 +142,7 @@ abbr[data-def]{cursor:pointer}
 
 <div class="tab" id="t-today"><div id="out" aria-live="polite"></div><p class="note">Forecasts are estimates. Always check with local lifeguards and signage.</p></div>
 <div class="tab" id="t-week" hidden><div id="week"></div></div>
-<div class="tab" id="t-beaches" hidden><section class="card" id="spots" hidden></section><p class="empty">Search for a beach or town above to see nearby beaches.</p></div>
+<div class="tab" id="t-beaches" hidden><input id="sq" type="search" placeholder="Search beaches nearby, e.g. Fistral" aria-label="Search beaches nearby" autocomplete="off"><section class="card" id="spots" hidden></section><p class="empty">Search for a beach or town above to see nearby beaches.</p></div>
 <div class="tab" id="t-skills" hidden>
   <section class="card"><h3>Your level</h3><p>Your level sets what counts as good for you: the wave size limits, which beaches are shown and how cautious the advice is. Change it with the 1 to 5 buttons at the top of Today, Week or Beaches.</p><button type="button" id="qbtn">Not sure of your level? Take the 1-minute quiz</button><div id="quiz" aria-live="polite"></div></section>
   <section class="card"><h3>Progress checklists</h3><p>Coming soon: skills to tick off, drills to practise, level-ups and a “conditions felt too big” button.</p></section>
@@ -304,7 +308,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.15 · 21 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.16 · 22 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -336,7 +340,7 @@ document.addEventListener('keydown', e => {
 });
 
 const trustTxt = {high:'', medium:'Fairly reliable', low:'Less certain, check again closer to the day'};
-let wk = null;   // this week's per-day results, reused when the better/avoid advice is filled in
+let wk = null, weekK = null;   // weekK: the day shown on the Week tab   // this week's per-day results, reused when the better/avoid advice is filled in
 function weekHTML(){
   if (!data.days || data.days.length < 2) return '';
   const res = data.days.map(d => Engine.dayBest(d.rows, level, inWhen));
@@ -360,10 +364,19 @@ function weekHTML(){
     return `<li><b>${lead}${nm}${star}</b><span class="tag ${band}">${tag}</span><span>Best ${hr(r.from.hour)} to ${hr(r.to.hour+1)}</span>
       <small>${Engine.bodyHeight(x.h)} (${fmtH(x.h)}) · ${x.period != null ? Math.round(x.period)+'s · ' : ''}${windTxt[r.type]}${big}${trust ? ' · '+trust : ''}</small>
       ${band === 'g' ? '' : `<div class="wk" data-k="${k}"></div>`}${show}</li>`;
-  }).join('');
-  return `<section class="card"><h3>Next 7 days (level ${level}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()})</h3>
-    <ul class="days">${lis}</ul>
-    <p class="legend">Best two-hour daylight window each day, scored for your level at the forecast point above. Forecasts get less certain the further ahead they look.</p></section>`;
+  });
+  const sel = Math.min(weekK ?? data.k, lis.length - 1);
+  const chips = data.days.map((d,k) => { const c = res[k] ? Engine.band(Math.round(adj[k])) : '';
+    return `<button type="button" data-wk="${k}" aria-pressed="${k===sel}">${k===0 ? 'Today' : dayName(d.date)}<span class="m ${c}">${c ? {g:'✓',o:'~',r:'✕'}[c] : '–'}</span></button>`; }).join('');
+  return `<section class="card"><h3>Pick a day (level ${level}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()})</h3>
+    <div class="daychips" role="group" aria-label="Day">${chips}</div>
+    <ul class="days">${lis[sel]}</ul>
+    <p class="legend">Best two-hour daylight window, scored for your level at the forecast point on Today. Forecasts get less certain the further ahead they look.</p></section>`;
+}
+function drawWeek(){
+  $('week').innerHTML = weekHTML();
+  const ch = $('week').querySelector('.daychips'), on = ch && ch.querySelector('[aria-pressed=true]'); if (on) ch.scrollLeft = on.offsetLeft - (ch.clientWidth - on.offsetWidth)/2;
+  if (spotsData) fillWeek(spotsData.filter(inReach));
 }
 /* On days that aren't green, say which coast is better and which to avoid (needs the beaches, so it fills in when they arrive) */
 function fillWeek(pool){
@@ -438,7 +451,7 @@ function render(){
     <dt>Wind</dt><dd>${Math.round(ref.windMph)} mph, ${s0.type}</dd>
     <dt>Water</dt><dd>${sst!=null ? Math.round(sst)+'°C: wear '+Engine.wetsuit(sst) : 'not available'}</dd>
     <dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></dl></section>`;
-  $('week').innerHTML = weekHTML();
+  drawWeek();
   drawSpots();
 }
 
@@ -545,8 +558,8 @@ $('geo').addEventListener('click', () => {
 
 /* ========= Run: forecast and beaches load side by side ========= */
 async function run(lat, lon, name){
-  const id = ++runId; spotRun++; showN = 10;
-  place = name; center = {lat, lon}; data = null; dayK = null; spotsData = null; spotsMsg = ''; fcFrom = null;
+  const id = ++runId; spotRun++; showN = 5;
+  place = name; center = {lat, lon}; data = null; dayK = null; weekK = null; $('sq').value = ''; spotsData = null; spotsMsg = ''; fcFrom = null;
   $('out').innerHTML = '<div class="skel" aria-label="Loading"></div>';
   $('spots').hidden = false; drawSpots();
   const fcP = loadForecast(lat, lon).then(d => ({d}), e => ({e}));
@@ -689,7 +702,8 @@ $('spots').addEventListener('click', e => {   // day and time pickers inside the
   const b = e.target.closest('button'); if (!b || b.disabled || !b.closest('.ctl')) return;
   if (b.dataset.d != null) setDay(+b.dataset.d, 'spots'); else if (b.dataset.w) setWhen(b.dataset.w, 'spots');
 });
-$('week').addEventListener('click', e => {   // "Show this day" in the week card
+$('week').addEventListener('click', e => {
+  const w = e.target.closest('button[data-wk]'); if (w){ weekK = +w.dataset.wk; drawWeek(); return; }
   const b = e.target.closest('button[data-d]'); if (b){ setDay(+b.dataset.d, 'week'); go('today'); }
 });
 function ctlHTML(){
@@ -700,7 +714,7 @@ function ctlHTML(){
 }
 
 /* ===== How far are you willing to travel? (miles, km or minutes of driving) ===== */
-let reach = {n:25, unit:'mi'}, showN = 10, spotRun = 0;
+let reach = {n:25, unit:'mi'}, showN = 5, spotRun = 0;
 try { const r = JSON.parse(localStorage.getItem('sb-reach') || 'null'); if (r && r.n > 0 && ['mi','km','min'].includes(r.unit)) reach = r; } catch(e){}
 const unitLbl = {mi:'miles', km:'km', min:'minutes drive'};
 const reachKm = () => Math.min(120, Math.max(2, reach.unit === 'mi' ? reach.n*1.609 : reach.n));   // search radius; for minutes it's a generous straight-line guess, then real drive times filter
@@ -719,7 +733,7 @@ function bindReach(){
 }
 async function reloadSpots(){
   if (!center) return;
-  const id = runId, sid = ++spotRun; showN = 10; spotsData = null; spotsMsg = ''; drawSpots();
+  const id = runId, sid = ++spotRun; showN = 5; spotsData = null; spotsMsg = ''; drawSpots();
   try {
     const l = await Promise.race([findSpots(center.lat, center.lon), new Promise((_, rej) => setTimeout(() => rej(new Error('timed out')), 35000))]);
     await addDrive(center.lat, center.lon, l);
@@ -764,7 +778,8 @@ function adviseCoasts(all){
 function drawSpots(){
   const box = $('spots'); if (!box) return;
   if (map){ map.remove(); map = null; }
-  const head = reachHTML() + ctlHTML();
+  const open = box.querySelector('details.more[open]') ? ' open' : '';
+  const head = ctlHTML() + `<details class="more"${open}><summary>Travel distance: ${reach.n} ${unitLbl[reach.unit]}</summary>${reachHTML()}</details>`;
   if (!spotsData || !data){
     box.innerHTML = head + (spotsMsg || '<h3>Finding beaches nearby…</h3><p class="legend">Asking the free map servers. This can take up to 30 seconds.</p><div class="skel"></div>');
     if (spotsMsg && $('advice')) $('advice').innerHTML = '';
@@ -779,10 +794,13 @@ function drawSpots(){
   const all = pool.map(s => ({s, r:scoreSpot(s, level)}))
     .sort((a,b) => (b.r.total - b.s.min*CONFIG.drivePenaltyPerMin) - (a.r.total - a.s.min*CONFIG.drivePenaltyPerMin));
   adviseCoasts(all);
-  const ranked = all.slice(0, showN);
+  const q = ($('sq').value || '').trim().toLowerCase();
+  const found = q ? spotsData.filter(s => (s.name || '').toLowerCase().includes(q)).map(s => ({s, r:scoreSpot(s, level)})).sort((a,b) => b.r.total - a.r.total) : null;
+  const ranked = found ? found.slice(0, 8) : all.slice(0, showN);
+  const dayWord = data.k===0 ? 'today' : data.k===1 ? 'tomorrow' : dayName(data.date, true);
   const goodOnes = ranked.filter(x => x.r.total >= CONFIG.okAt).length;
-  const title = here >= CONFIG.goodAt ? 'Other beaches nearby' : 'Better places nearby';
-  const intro = here < CONFIG.okAt && goodOnes ? `Not great here for level ${level}, but these nearby beaches should be better:`
+  const title = found ? `Results for “${esc(q)}”` : 'Best beaches ' + dayWord;
+  const intro = found ? (found.length ? `Ranked for level ${level}.` : `No beach called “${esc(q)}” in the area we searched. Try another spelling or a nearby town.`) : here < CONFIG.okAt && goodOnes ? `Not great here for level ${level}, but these nearby beaches should be better:`
     : goodOnes ? `Nearby beaches, best first for level ${level}:`
     : `Nothing nearby looks good for level ${level} ${data.label}. These are the least bad. Consider another day, a bigger travel distance, or a lesson with a surf school.`;
   const cards = ranked.map(({s,r},i) => {
@@ -792,22 +810,22 @@ function drawSpots(){
     const big = !r.none && r.h > CONFIG.levels[level-1].maxH ? ' ⚠ Bigger than level '+level+' should handle.' : '';
     const cond = r.none ? '' : `<span class="ln">${roughFt(r.h)} waves (${Engine.bodyHeight(r.h)}) · ${Math.round(r.period)}s swell period</span>`;
     const when = r.none ? '' : `best ${hr(r.win[0].hour)} to ${hr(r.win[1].hour+1)} · `;
-    return `<button type="button" class="spot" data-i="${i}"><b>${esc(s.name)}</b><span class="tag ${b}">${tag}</span>${cond}
+    return `<button type="button" class="spot" data-i="${i}"><b>${found ? '' : '#'+(i+1)+' '}${esc(s.name)}</b><span class="tag ${b}">${tag}</span>${cond}
       <span class="ln">${when}about ${s.min} min drive${s.est?' (estimate)':''} · ${dist(s.km)}</span><small>${shelter}${wind}${big}</small></button>`;
   }).join('');
-  const more = all.length > showN ? `<button type="button" class="spot" id="more">Show more beaches (${all.length-showN} more)</button>` : '';
-  box.innerHTML = head + `<h3>${title}</h3><p>${intro}</p><p class="legend">${data.k===0 ? 'Today' : data.k===1 ? 'Tomorrow' : dayName(data.date, true)}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()}. Showing ${ranked.length} of ${all.length} beaches within ${reach.n} ${unitLbl[reach.unit]}. The map shows all of them.</p><div id="map" role="region" aria-label="Map of nearby beaches"></div>${cards}${more}
+  const more = !found && all.length > showN ? `<button type="button" class="spot" id="more">Show more beaches (${all.length-showN} more)</button>` : '';
+  box.innerHTML = head + `<h3>${title}</h3><p>${intro}</p><p class="legend">${data.k===0 ? 'Today' : data.k===1 ? 'Tomorrow' : dayName(data.date, true)}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()}. Showing ${ranked.length} of ${all.length} beaches within ${reach.n} ${unitLbl[reach.unit]}. The map shows the ones listed.</p><div id="map" role="region" aria-label="Map of nearby beaches"></div>${cards}${more}
     <p class="legend">Wave heights are rough estimates for each beach, worked out from its angle. Beach angles are estimated, so local knowledge matters. Ask a lifeguard or surf school.</p>`;
-  bindReach(); const mb = $('more'); if (mb) mb.onclick = () => { showN += 10; drawSpots(); };
+  bindReach(); const mb = $('more'); if (mb) mb.onclick = () => { showN += 5; drawSpots(); };
   if (typeof L === 'undefined'){ $('map').outerHTML = '<p class="legend">Map couldn’t load (check your connection).</p>'; return; }
   map = L.map('map', {scrollWheelZoom:false});
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18, attribution:'© OpenStreetMap contributors'}).addTo(map);
   L.circleMarker([center.lat, center.lon], {radius:7, color:'#fff', weight:2, fillColor:'#0c2a31', fillOpacity:1}).addTo(map).bindTooltip('You searched here');
-  const markers = all.map(({s,r},i) => { const b = Engine.band(r.total);
+  const markers = ranked.map(({s,r},i) => { const b = Engine.band(r.total);
     return L.marker([s.lat, s.lon], {icon:L.divIcon({className:'', iconSize:[96,24], iconAnchor:[48,12],
       html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'✕'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`}), zIndexOffset:1000-i}).addTo(map)
       .bindPopup(`<b>${esc(s.name)}</b><br>${r.none ? '' : roughFt(r.h)+' waves · '+Math.round(r.period)+'s swell<br>'}About ${s.min} min drive`); });
-  map.fitBounds(L.latLngBounds([[center.lat, center.lon], ...all.map(x => [x.s.lat, x.s.lon])]).pad(0.15));
+  if (ranked.length) map.fitBounds(L.latLngBounds([[center.lat, center.lon], ...ranked.map(x => [x.s.lat, x.s.lon])]).pad(0.15)); else map.setView([center.lat, center.lon], 11);
   box.querySelectorAll('.spot[data-i]').forEach(el => el.addEventListener('click', () => {
     const m = markers[+el.dataset.i]; map.setView(m.getLatLng(), 14); m.openPopup(); $('map').scrollIntoView({block:'center'});
   }));
@@ -867,6 +885,7 @@ function quizResult(){
 }
 function startQuiz(){ qi = 0; ans = []; quizStep(); }
 $('qbtn').addEventListener('click', startQuiz);
+let sqT; $('sq').addEventListener('input', () => { clearTimeout(sqT); sqT = setTimeout(() => { if (data && spotsData) drawSpots(); }, 250); });   // search beaches by name
 
 /* ===== Tabs: to add a feature, add one line to TABS and one <div class="tab" id="t-NAME" hidden> panel ===== */
 const TABS = [
