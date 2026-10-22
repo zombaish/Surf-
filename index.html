@@ -117,12 +117,51 @@ abbr[data-def]{cursor:pointer}
 .daychips .m{display:block;font-size:.8rem;font-weight:700}.daychips .m.g{color:var(--good)}.daychips .m.o{color:var(--ok)}.daychips .m.r{color:var(--bad)}
 .daychips button[aria-pressed=true] .m{color:inherit}
 details.more summary{cursor:pointer;color:var(--mute);padding:8px 0;font-size:.85rem}
+/* ===== v0.17 look and feel ===== */
+:root{--on:#fff}
+@media (prefers-color-scheme:dark){:root{--on:#05222a}}
+html[data-theme=sea]{--bg:#f4f9fa;--card:#fff;--ink:#0b2530;--mute:#4a6670;--line:#dbe7ea;--teal:#0b7285;--on:#fff;--good:#17653f;--goodbg:#e3f5ea;--ok:#7a4d00;--okbg:#fdf3d8;--bad:#a3201a;--badbg:#fcebe8}
+html[data-theme=sand]{--bg:#faf6ef;--card:#fffdf9;--ink:#2b2118;--mute:#6b5d4f;--line:#eadfce;--teal:#a8481f;--on:#fff;--good:#17653f;--goodbg:#e6f3e3;--ok:#7a4d00;--okbg:#fbefd2;--bad:#a3201a;--badbg:#fbe6e0}
+html[data-theme=dusk]{--bg:#0a1626;--card:#122338;--ink:#e9f1f8;--mute:#9fb4c8;--line:#223a55;--teal:#5cc8d6;--on:#05222a;--good:#7be0a6;--goodbg:#10382a;--ok:#f2c35b;--okbg:#3a2d0b;--bad:#ff9a92;--badbg:#46181a}
+html[data-theme=sea] .leaflet-tile-pane,html[data-theme=sand] .leaflet-tile-pane{filter:none}
+html[data-theme=dusk] .leaflet-tile-pane{filter:brightness(.8) saturate(.9)}
+body{background:radial-gradient(900px 320px at 50% -100px,color-mix(in srgb,var(--teal) 16%,transparent),transparent) no-repeat,var(--bg)}
+h1{display:flex;align-items:center;gap:10px;font-size:1.9rem;letter-spacing:-.02em}
+h1 .logo{width:30px;height:30px;color:var(--teal);flex:none}
+.hero{position:relative;overflow:hidden;padding:6px 0 28px}.hero .sub{max-width:30em;margin:0}
+.swell{position:absolute;left:-10%;width:120%;bottom:0;height:28px;fill:var(--teal);opacity:.14;animation:drift 10s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translateX(-6%)}}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.tab:not([hidden]){animation:rise .32s cubic-bezier(.2,.7,.2,1) both}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin:12px 0;box-shadow:0 1px 2px rgba(8,38,52,.05),0 12px 28px -16px rgba(8,38,52,.25)}
+input,button{border-width:1px;border-radius:14px;transition:background .2s,color .2s,border-color .2s,transform .12s,box-shadow .2s}
+button:active{transform:scale(.97)}
+button:not(:disabled):hover{border-color:var(--teal)}
+input:focus-visible,button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+button.go{background:var(--teal);color:var(--on);border-color:var(--teal);box-shadow:0 6px 14px -8px var(--teal)}
+.levels button[aria-pressed=true],.whens button[aria-pressed=true],.daychips button[aria-pressed=true]{background:var(--teal);color:var(--on);border-color:var(--teal);box-shadow:0 6px 14px -8px var(--teal)}
+.verdict{border-width:1px;border-radius:24px;box-shadow:0 14px 30px -20px currentColor}
+.spot{border-radius:16px;transition:transform .15s,box-shadow .2s,border-color .2s}.spot:hover{transform:translateY(-1px)}
+.pin{box-shadow:0 2px 8px rgba(0,0,0,.28)}
+#nav{background:color-mix(in srgb,var(--card) 88%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+#nav svg{width:24px;height:24px;margin-bottom:2px;transition:transform .2s}
+#nav button[aria-current=page]{box-shadow:none}
+#nav button[aria-current=page] svg{transform:translateY(-1px);stroke-width:2.2}
+#nav button[aria-current=page]::after{content:'';width:4px;height:4px;border-radius:50%;background:var(--teal)}
+.themes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.themes button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;font-size:.8rem;min-height:0}
+.themes i{width:24px;height:24px;border-radius:50%}
+.themes button[aria-pressed=true]{border:2px solid var(--teal)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <main>
-<h1>Shorebreak <small id="ver"></small></h1>
+<header class="hero">
+<h1><svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="6.5" r="2.5"/><path d="M2 13c2.5 0 2.5-2.5 5-2.5S9.5 13 12 13s2.5-2.5 5-2.5S19.5 13 22 13M2 18.5c2.5 0 2.5-2.5 5-2.5s2.5 2.5 5 2.5 2.5-2.5 5-2.5 2.5 2.5 5 2.5"/></svg>Shorebreak <small id="ver"></small></h1>
 <p class="sub">Is the surf right for you today? Plain-English answers from free marine forecast data.</p>
+<svg class="swell" viewBox="0 0 400 40" preserveAspectRatio="none" aria-hidden="true"><path d="M0 24c40 0 40-16 80-16s40 16 80 16 40-16 80-16 40 16 80 16 40-16 80-16v32H0z"/></svg>
+</header>
 
 <form class="row" id="f" role="search">
   <div class="sbox">
@@ -148,6 +187,7 @@ details.more summary{cursor:pointer;color:var(--mute);padding:8px 0;font-size:.8
   <section class="card"><h3>Progress checklists</h3><p>Coming soon: skills to tick off, drills to practise, level-ups and a “conditions felt too big” button.</p></section>
 </div>
 <div class="tab" id="t-more" hidden>
+  <section class="card"><h3>Appearance</h3><div class="themes" id="themes" role="group" aria-label="Colour theme"></div></section>
   <section class="card"><h3>Coming soon</h3><p>Safety Center, Etiquette and lineup rules, Gear Guide, Session Log, and a shareable “Should I go?” link.</p></section>
   <p class="note">Forecasts are estimates. The main verdict judges wind against the swell direction; the nearby beaches use their own angles, estimated from the coastline. Always check with local lifeguards and signage before you paddle out.<br>Data: Open-Meteo (marine and weather), OpenStreetMap contributors (map and beaches, via Photon and Overpass), Copernicus DEM via Open-Meteo (beach angles), OSRM (drive times), Leaflet (map).</p>
 </div>
@@ -308,7 +348,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.16 · 22 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.17 · 22 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -814,18 +854,19 @@ function drawSpots(){
       <span class="ln">${when}about ${s.min} min drive${s.est?' (estimate)':''} · ${dist(s.km)}</span><small>${shelter}${wind}${big}</small></button>`;
   }).join('');
   const more = !found && all.length > showN ? `<button type="button" class="spot" id="more">Show more beaches (${all.length-showN} more)</button>` : '';
-  box.innerHTML = head + `<h3>${title}</h3><p>${intro}</p><p class="legend">${data.k===0 ? 'Today' : data.k===1 ? 'Tomorrow' : dayName(data.date, true)}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()}. Showing ${ranked.length} of ${all.length} beaches within ${reach.n} ${unitLbl[reach.unit]}. The map shows the ones listed.</p><div id="map" role="region" aria-label="Map of nearby beaches"></div>${cards}${more}
+  box.innerHTML = head + `<h3>${title}</h3><p>${intro}</p><p class="legend">${data.k===0 ? 'Today' : data.k===1 ? 'Tomorrow' : dayName(data.date, true)}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()}. Showing ${ranked.length} of ${all.length} beaches within ${reach.n} ${unitLbl[reach.unit]}. The map shows every beach in range.</p><div id="map" role="region" aria-label="Map of nearby beaches"></div>${cards}${more}
     <p class="legend">Wave heights are rough estimates for each beach, worked out from its angle. Beach angles are estimated, so local knowledge matters. Ask a lifeguard or surf school.</p>`;
   bindReach(); const mb = $('more'); if (mb) mb.onclick = () => { showN += 5; drawSpots(); };
   if (typeof L === 'undefined'){ $('map').outerHTML = '<p class="legend">Map couldn’t load (check your connection).</p>'; return; }
   map = L.map('map', {scrollWheelZoom:false});
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18, attribution:'© OpenStreetMap contributors'}).addTo(map);
   L.circleMarker([center.lat, center.lon], {radius:7, color:'#fff', weight:2, fillColor:'#0c2a31', fillOpacity:1}).addTo(map).bindTooltip('You searched here');
-  const markers = ranked.map(({s,r},i) => { const b = Engine.band(r.total);
+  const onMap = [...ranked, ...all.filter(x => !ranked.some(y => y.s === x.s))];   // the map shows every beach, the list only the top ones
+  const markers = onMap.map(({s,r},i) => { const b = Engine.band(r.total);
     return L.marker([s.lat, s.lon], {icon:L.divIcon({className:'', iconSize:[96,24], iconAnchor:[48,12],
       html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'✕'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`}), zIndexOffset:1000-i}).addTo(map)
       .bindPopup(`<b>${esc(s.name)}</b><br>${r.none ? '' : roughFt(r.h)+' waves · '+Math.round(r.period)+'s swell<br>'}About ${s.min} min drive`); });
-  if (ranked.length) map.fitBounds(L.latLngBounds([[center.lat, center.lon], ...ranked.map(x => [x.s.lat, x.s.lon])]).pad(0.15)); else map.setView([center.lat, center.lon], 11);
+  if (onMap.length) map.fitBounds(L.latLngBounds([[center.lat, center.lon], ...onMap.map(x => [x.s.lat, x.s.lon])]).pad(0.15)); else map.setView([center.lat, center.lon], 11);
   box.querySelectorAll('.spot[data-i]').forEach(el => el.addEventListener('click', () => {
     const m = markers[+el.dataset.i]; map.setView(m.getLatLng(), 14); m.openPopup(); $('map').scrollIntoView({block:'center'});
   }));
@@ -888,9 +929,10 @@ $('qbtn').addEventListener('click', startQuiz);
 let sqT; $('sq').addEventListener('input', () => { clearTimeout(sqT); sqT = setTimeout(() => { if (data && spotsData) drawSpots(); }, 250); });   // search beaches by name
 
 /* ===== Tabs: to add a feature, add one line to TABS and one <div class="tab" id="t-NAME" hidden> panel ===== */
+const ic = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const TABS = [
-  {id:'today', label:'Today', icon:'🌊', strip:true}, {id:'week', label:'Week', icon:'📅', strip:true},
-  {id:'beaches', label:'Beaches', icon:'📍', strip:true}, {id:'skills', label:'Skills', icon:'🏄'}, {id:'more', label:'More', icon:'☰'}];
+  {id:'today', label:'Today', icon:ic('<circle cx="12" cy="6.5" r="2.5"/><path d="M2 13c2.5 0 2.5-2.5 5-2.5S9.5 13 12 13s2.5-2.5 5-2.5S19.5 13 22 13M2 18.5c2.5 0 2.5-2.5 5-2.5s2.5 2.5 5 2.5 2.5-2.5 5-2.5 2.5 2.5 5 2.5"/>'), strip:true}, {id:'week', label:'Week', icon:ic('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'), strip:true},
+  {id:'beaches', label:'Beaches', icon:ic('<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'), strip:true}, {id:'skills', label:'Skills', icon:ic('<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>')}, {id:'more', label:'More', icon:ic('<circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/>')}];
 $('nav').innerHTML = TABS.map(t => `<button type="button" data-t="${t.id}"><span aria-hidden="true">${t.icon}</span>${t.label}</button>`).join('');
 $('nav').addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(b.dataset.t); });
 function go(id){
@@ -903,6 +945,18 @@ function go(id){
   try { history.replaceState(null, '', '#' + t.id); } catch(e){}
 }
 go((location.hash || '').slice(1));
+
+/* ===== Colour themes (stored on this device) ===== */
+const THEMES = [['auto','Auto','linear-gradient(135deg,#eef5f4 50%,#0a1626 50%)'],['sea','Sea','linear-gradient(135deg,#fff 50%,#0b7285 50%)'],['sand','Sand','linear-gradient(135deg,#faf6ef 50%,#a8481f 50%)'],['dusk','Dusk','linear-gradient(135deg,#122338 50%,#5cc8d6 50%)']];
+$('themes').innerHTML = THEMES.map(([k,n,c]) => `<button type="button" data-t="${k}"><i style="background:${c};box-shadow:inset 0 0 0 1px var(--line)"></i>${n}</button>`).join('');
+function setTheme(t){
+  const h = document.documentElement; if (t === 'auto') h.removeAttribute('data-theme'); else h.setAttribute('data-theme', t);
+  $('themes').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.t === t)));
+  try { localStorage.setItem('sb-theme', t); } catch(e){}
+}
+$('themes').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setTheme(b.dataset.t); });
+let th = 'auto'; try { th = localStorage.getItem('sb-theme') || 'auto'; } catch(e){}
+setTheme(THEMES.some(x => x[0] === th) ? th : 'auto');
 drawLevels(); drawWhens();
 </script>
 </body>
