@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shorebreak – Today's surf verdict for beginners</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f6b75">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
@@ -76,6 +80,8 @@ select{display:block;width:100%;font:inherit;min-height:48px;border-radius:12px;
 .where{margin:10px 0 0;font-size:.9rem;color:var(--mute)}.where b{color:var(--ink)}
 button.link{min-height:0;border:0;background:none;color:var(--teal);text-decoration:underline;padding:4px 2px;font-weight:600}
 .cond{margin:12px 0 0;font-size:.85rem;color:var(--ink)}
+#inst [hidden]{display:none!important}
+.explain{margin-top:10px;color:var(--ink)}.explain summary{cursor:pointer;font-weight:700;padding:10px 0;min-height:44px;box-sizing:border-box}.explain p{margin:6px 0;font-size:.92rem}
 .reach{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px}.reach label{font-weight:600}
 #rn{flex:none;width:88px;min-width:0}#ru{display:inline-block;width:auto;margin:0;flex:1 1 150px}
 .spot .ln{display:block}
@@ -217,6 +223,9 @@ form.row button.go{background:var(--teal);color:var(--on)}
 #map.fs{position:fixed !important;inset:0 !important;z-index:3000;width:100% !important;height:100vh !important;height:100dvh !important;margin:0;border:0;border-radius:0}
 #map.fs .leaflet-top{top:env(safe-area-inset-top,0px)}#map.fs .leaflet-bottom{bottom:env(safe-area-inset-bottom,0px)}
 body.fs-lock{overflow:hidden}
+.card.feat{border-top:1px solid var(--line)}.card.feat>h3{margin:0 0 6px}.card.feat>div{padding:0}
+#kitseg{grid-template-columns:repeat(3,1fr);margin-bottom:6px}#t-kit [hidden],#t-skills [hidden]{display:none!important}
+.spotw{position:relative}.spotw .spot{padding-right:58px}.fav{position:absolute;top:10px;right:6px;width:46px;height:46px;min-height:46px;padding:0;border:0;background:none;font-size:1.6rem;line-height:1;color:#c98a00}.fav[aria-pressed=true]{color:#e0a800}
 </style>
 </head>
 <body>
@@ -251,17 +260,67 @@ body.fs-lock{overflow:hidden}
 <div class="tab" id="t-week" hidden><div id="week"></div></div>
 <div class="tab" id="t-beaches" hidden><input id="sq" type="search" placeholder="Search beaches nearby, e.g. Fistral" aria-label="Search beaches nearby" autocomplete="off"><select id="bsel" aria-label="Pick any beach nearby" hidden></select><section class="card" id="spots" hidden></section><p class="empty">Search for a beach or town above to see nearby beaches.</p></div>
 <div class="tab" id="t-skills" hidden>
+  <div class="whens" id="skseg" role="group" aria-label="Skills sections" style="grid-template-columns:repeat(2,1fr);margin-bottom:6px"><button type="button" aria-pressed="true" data-k="main">My level and progress</button><button type="button" aria-pressed="false" data-k="learn">Learn</button></div>
+  <div id="sk-main">
   <section class="card"><h3>Your level</h3><p>Your level decides what counts as good for you. Change it with the 1 to 5 buttons on Today, Week or Beaches.</p><button type="button" id="qbtn">Not sure of your level? Take the 1-minute quiz</button><div id="quiz" aria-live="polite"></div></section>
   <section class="card"><h3>Progress checklists</h3><p id="pmsg" class="legend" role="status"></p><div id="prog"></div></section>
+  </div>
+  <div id="sk-learn" hidden>
+  <section class="card feats"><h3>Learn the basics</h3>
+<details class="feat"><summary>How to read a forecast</summary><div>
+<p><b>Wave height</b> is how big the waves are. Here we show it in body terms (knee, waist, chest, head) as well as feet or metres. Forecast heights are an average, so some waves will be bigger.</p>
+<p><b>Period</b> is the seconds between waves. A longer period means more power. 6 to 10 seconds is friendly. Over 12 seconds, waves hit harder than they look.</p>
+<p><b>Wind</b> matters as much as size. <b>Offshore</b> wind blows from the land to the sea and gives clean, tidy waves. <b>Onshore</b> wind blows toward the beach and makes waves choppy and messy. <b>Cross-shore</b> is sideways and a bit bumpy.</p>
+<p><b>Tide</b> changes how waves break. Some beaches work best at mid tide, some only at low or high. Check a local tide table and ask a local surf school.</p>
+<p>The coloured bars on Today show how suitable each hour is for your level: ✓ good, ~ marginal, ○ not ideal. Forecasts further out are less certain, so check again closer to the day.</p></div></details>
+<details class="feat"><summary>How waves form</summary><div>
+<p>Wind blowing over a large area of ocean pushes the water into ripples, then bumps, then <b>swell</b>: rolling lines of energy that can travel thousands of miles. Long distances sort the swell into tidy lines with long gaps between them. That is why a storm far away can give clean waves on a calm day.</p>
+<p>When a swell reaches shallow water near the coast, the bottom slows the front of the wave while the back keeps moving, so the wave grows steeper and finally <b>breaks</b>. Sandy beaches give gentle, shifting waves. Reefs and rocks give faster waves in fixed places.</p>
+<p>Local wind creates smaller, messier <b>wind waves</b> on top of the swell. Beginners do best when the swell is small and tidy and the wind is light or offshore.</p></div></details>
+<details class="feat"><summary>How tides and wind change things</summary><div>
+<p><b>Tide</b> is the sea level rising and falling. At low tide waves may break further out, hit shallow sand or rocks, and sometimes close out. At high tide waves can be weak and break right at the shore. Mid tide, rising or falling, is often a good starting point, but every beach is different.</p>
+<p><b>Rips</b> can get stronger as the tide drops and water drains off the beach, and they are stronger when waves are bigger. Always read the beach first (see the Safety Center).</p>
+<p><b>Wind</b> that turns onshore during the day can spoil a clean morning. That is why dawn is often best, and also quieter.</p></div></details>
+<details class="feat"><summary>Before your first lesson</summary><div>
+<p><b>What to expect:</b> 1.5 to 2 hours. Warm-up, a beach safety talk, pop-up practice on the sand, then time in small waves close to shore on a foam board. You will be tired. That is normal.</p>
+<p><b>What to bring:</b> swimwear (wear it under your wetsuit), a towel and a change of clothes, water and a snack, sun cream and a hat for after, and any medication you need. Most schools include the board and wetsuit.</p>
+<p><b>Good questions to ask:</b> How many people per instructor? Are you insured and first-aid trained? Is the beach lifeguarded? What happens if I get tired or the conditions change? Can I bring a friend?</p>
+<p><b>Do:</b> eat a light meal 1 to 2 hours before, drink water, tell the instructor about injuries, and arrive 15 minutes early.</p></div></details>
+<details class="feat"><summary>Choosing a surf school</summary><div>
+<p>Look for a school approved by your country’s surfing body or a recognised surf organisation, and ask to see it. Check that it has public liability insurance and that instructors hold first-aid and lifeguard or water-safety qualifications.</p>
+<p>Smaller groups are better. About 6 students per instructor or fewer is a good guide for beginners. Ask where lessons run: a lifeguarded beach with gentle waves is ideal.</p>
+<p>Read recent reviews, and be cautious of a school that guarantees you will stand up on the first day. A good school says honestly if conditions are too big and will move or cancel the lesson.</p></div></details>
+<details class="feat"><summary>Beginner FAQ</summary><div>
+<p><b>Do I need to be fit?</b> Fair fitness helps, because paddling is tiring, but you can start at any level. Take breaks.</p>
+<p><b>Can I learn if I’m not a strong swimmer?</b> You need to be comfortable in the water. Start with a lesson in knee-to-waist-deep water and stay close to shore. The quiz in Skills will set a safe level.</p>
+<p><b>How long until I can stand up?</b> Many people stand on whitewater waves in their first lesson or two. Catching green waves usually takes weeks or months of regular practice.</p>
+<p><b>Which board should I use?</b> A big, soft foam board. It is stable, floaty and safer if it hits you. See Board finder in Kit and log.</p>
+<p><b>Do I need a wetsuit?</b> In cold water, yes. The wetsuit finder in Kit and log suggests a thickness from the water temperature.</p>
+<p><b>I’m scared of big waves. Is that normal?</b> Yes, and it is a good instinct. Pick small days, stay in whitewater, and move up only when each step feels easy.</p></div></details>
+<details class="feat"><summary>Glossary</summary><div id="glos"></div></details>
+</section>
+  </div>
+</div>
+<div class="tab" id="t-kit" hidden>
+  <h2 style="margin:4px 0 12px;font-size:1.25rem">My kit and sessions</h2>
+  <div class="whens" id="kitseg" role="group" aria-label="My kit sections"><button type="button" aria-pressed="true" data-k="gear">Gear</button><button type="button" aria-pressed="false" data-k="log">Session log</button><button type="button" aria-pressed="false" data-k="share">Share</button></div>
+  <section class="card feat" id="k-gear"><h3>Board finder and gear</h3><div id="f-gear"></div></section>
+  <section class="card feat" id="k-log" hidden><h3>Session log</h3><div id="f-log"></div></section>
+  <section class="card feat" id="k-share" hidden><h3>Share a “Should I go?” link</h3><div id="f-share"></div></section>
 </div>
 <div class="tab" id="t-more" hidden>
+  <section class="card"><h3>Units</h3><div id="units"></div></section>
+  <section class="card"><h3>Back up and restore</h3>
+    <p class="legend" style="margin:0 0 10px">Your level, progress, favourites, notes, gear ticks, session log and settings live on this phone only. Save them to a file to move them to another phone or keep them safe.</p>
+    <div class="row"><button type="button" class="go" id="bkSave">Save backup</button><button type="button" id="bkLoad">Restore from file</button></div>
+    <input type="file" id="bkFile" accept="application/json,.json" hidden>
+    <p class="legend" id="bkMsg" role="status"></p>
+    <p style="margin:10px 0 0"><button type="button" class="link" id="bkWipe">Delete all my data on this device</button></p></section>
   <section class="card"><h3>Appearance</h3><div class="themes" id="themes" role="group" aria-label="Colour theme"></div></section>
-  <section class="card feats"><h3>Tools</h3>
+  <section class="card" id="inst"><h3>Install on your phone</h3><p class="legend" id="instTxt" style="margin:0 0 4px">Open Chrome’s ⋮ menu and choose <b>Install app</b> (or <b>Add to home screen</b>) to open Shorebreak like an app. It also keeps your last forecast for when you have no signal.</p><button type="button" class="go" id="instBtn" hidden>Install app</button></section>
+  <section class="card feats"><h3>Safety and etiquette</h3>
 <details class="feat"><summary>Safety Center</summary><div id="f-safety"></div></details>
 <details class="feat"><summary>Etiquette and lineup rules</summary><div id="f-etiq"></div></details>
-<details class="feat"><summary>Gear guide</summary><div id="f-gear"></div></details>
-<details class="feat"><summary>Session log</summary><div id="f-log"></div></details>
-<details class="feat"><summary>Share a “Should I go?” link</summary><div id="f-share"></div></details>
 </section>
   <p class="note">Forecasts are estimates. The main verdict judges wind against the swell direction; the nearby beaches use their own angles, estimated from the coastline. Always check with local lifeguards and signage before you paddle out.<br>Data: Open-Meteo (marine and weather), OpenStreetMap contributors (map and beaches, via Photon and Overpass), Copernicus DEM via Open-Meteo (beach angles), OSRM (drive times), Leaflet (map).</p>
 </div>
@@ -327,6 +386,24 @@ const Engine = {
     if (!x.daylight) total = 0;
     return {total:Math.round(total), type, parts, night:!x.daylight};
   },
+  explain(x, L){   // the same maths as score(), broken into plain-English parts: what helped, what hurt
+    const sc = this.score(x, L); if (!sc) return null;
+    const c = CONFIG.levels[L-1], w = CONFIG.weights, [lo, hi] = CONFIG.periodIdeal, p = x.period ?? 8;
+    const text = {
+      size: x.h < c.idealMin ? `Small for level ${L}, so expect a slow session.` : x.h <= c.maxH ? `A comfortable size for level ${L}.`
+        : x.h > c.maxH * 1.3 ? `Much bigger than level ${L} should handle.` : `A bit bigger than level ${L} is comfortable with.`,
+      wind: ({offshore:'Wind blowing off the land: clean, tidy waves.', onshore:'Wind blowing onto the beach: choppy and messy, and worse the stronger it blows.', cross:'Wind blowing along the beach: a bit bumpy.'})[sc.type]
+        + (x.windMph > c.maxWind ? ` It is stronger than level ${L} likes.` : ''),
+      period: p < lo ? 'Short gaps between waves: choppy and weak.' : p <= hi ? 'A comfortable gap between waves.' : 'Long gaps between waves: they hit harder than they look.'
+    };
+    const lines = [['Wave size','size'], ['Wind','wind'], ['Swell period','period']].map(([name, k]) => ({
+      name, k, score:Math.round(sc.parts[k]), weight:Math.round(w[k]*100), pts:Math.round(sc.parts[k]*w[k]), lost:(100 - sc.parts[k])*w[k], text:text[k]}));
+    const notes = [];
+    if (x.h > c.maxH * 1.3) notes.push(`Capped at 25 because the waves are too big for level ${L}, whatever else is going on.`);
+    if (!x.daylight) notes.push('Score is 0 because it is dark.');
+    const worst = lines.reduce((a, b) => b.lost > a.lost ? b : a);
+    return {total:sc.total, band:this.band(sc.total), lines, notes, drag: worst.lost >= 5 ? worst.name : null};
+  },
   band(t){ return t >= CONFIG.goodAt ? 'g' : t >= CONFIG.okAt ? 'o' : 'r'; },
   bestWindow(scores, len=2){   // scores: array of numbers (null = no data)
     let best = {i:-1, avg:-1};
@@ -382,6 +459,12 @@ const Engine = {
     a(this.sizeScore(1.2,1)===0,'size too big for L1');
     a(this.score({h:0.4,period:8,windMph:5,windFrom:270,waveFrom:90,daylight:false},1).total===0,'night = 0');
     a(this.bestWindow([null,50,60,null]).i===1,'window skips nulls');
+    { const ex = this.explain({h:0.4,period:8,windMph:5,windFrom:270,waveFrom:90,daylight:true},1);
+      a(ex && ex.total===100 && ex.band==='g' && ex.drag===null && ex.lines.length===3,'explain: perfect day');
+      const bad = this.explain({h:1.2,period:8,windMph:20,windFrom:90,waveFrom:90,daylight:true},1);
+      a(bad.total<=25 && bad.notes.length===1 && bad.drag==='Wave size','explain: too big is capped and blamed on size');
+      a(this.explain({h:0.4,period:8,windMph:5,windFrom:270,waveFrom:90,daylight:false},1).notes.length===1,'explain: night note');
+      a(this.explain({h:null,windMph:5},1)===null,'explain: no data = null'); }
     a(this.exposure(90,90)===1 && this.exposure(270,90)===CONFIG.exposure.minShare,'exposure');
     const mk = (hour, o={}) => ({t:'x'+hour, hour, h:0.4, period:8, windMph:5, windFrom:270, waveFrom:90, daylight:true, past:false, ...o});
     const day = [mk(7), mk(8), mk(9), mk(20,{daylight:false})];
@@ -407,7 +490,7 @@ if (location.search.includes('test')) Engine.selfTest();
 const get = async u => { const r = await fetch(u); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); };
 const dayName = (date, long) => new Date(date + 'T12:00:00Z').toLocaleDateString(undefined, long ? {weekday:'short', day:'numeric', month:'short', timeZone:'UTC'} : {weekday:'short', day:'numeric', timeZone:'UTC'});
 async function loadForecast(lat, lon){
-  const m = get(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=wave_height,wave_period,wave_direction,sea_surface_temperature&cell_selection=sea&timezone=auto&forecast_days=7`).catch(() => null);   // null = no wave data at this point
+  const m = get(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=wave_height,wave_period,wave_direction,sea_surface_temperature,sea_level_height_msl&cell_selection=sea&timezone=auto&forecast_days=7`).catch(() => null);   // null = no wave data at this point
   const w = get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=wind_speed_10m,wind_direction_10m&daily=sunrise,sunset&wind_speed_unit=mph&timezone=auto&forecast_days=7`);
   const [marine, wx] = await Promise.all([m, w]);
   if (!marine || !marine.hourly) return null;
@@ -419,7 +502,7 @@ async function loadForecast(lat, lon){
       if (!t.startsWith(date)) return;
       const j = wx.hourly.time.indexOf(t);
       rows.push({t, hour:+t.slice(11,13), h:marine.hourly.wave_height[i], period:marine.hourly.wave_period[i],
-        waveFrom:marine.hourly.wave_direction[i], sst:marine.hourly.sea_surface_temperature[i],
+        waveFrom:marine.hourly.wave_direction[i], sst:marine.hourly.sea_surface_temperature[i], tide:marine.hourly.sea_level_height_msl ? marine.hourly.sea_level_height_msl[i] : null,
         windMph:wx.hourly.wind_speed_10m[j], windFrom:wx.hourly.wind_direction_10m[j],
         daylight: t >= rise.slice(0,13)+':00' && t <= set, past: t.slice(0,13) < now.slice(0,13)});
     });
@@ -427,12 +510,15 @@ async function loadForecast(lat, lon){
   };
   const days = wx.daily.time.map((_, k) => build(k)), d0 = days[0];
   const defK = d0.rows.some(r => r.daylight && !r.past) || !days[1] ? 0 : 1;   // daylight over? start on tomorrow
-  return {...days[defK], days, defK, k:defK};   // days: all 7, for the week card and the day picker
+  const tl = marine.hourly.sea_level_height_msl || [], tides = [];   // high and low tides: the hours where the sea level turns round
+  for (let i = 1; i < tl.length - 1; i++){ const a = tl[i-1], b = tl[i], c = tl[i+1]; if (a == null || b == null || c == null) continue;
+    if (b > a && b >= c) tides.push({t:marine.hourly.time[i], h:b, hi:true}); else if (b < a && b <= c) tides.push({t:marine.hourly.time[i], h:b, hi:false}); }
+  return {...days[defK], days, defK, k:defK, tides, off};   // days: all 7, for the week card and the day picker
 }
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.21 · 22 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.33 · 22 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -453,7 +539,12 @@ function bestFor(L){
   const b = Engine.bestWindow(sc.map((s,k) => s && !s.night && inWhen(data.rows[k]) ? s.total : null));   // daylight hours in the chosen part of the day
   return {sc, b};
 }
-const fmtH = h => (h/0.3048).toFixed(1).replace('.0','') + ' ft';
+const UNITS = {len:'ft', wind:'mph', temp:'C'};   // chosen on the More tab, saved on this device
+try { Object.assign(UNITS, JSON.parse(localStorage.getItem('sb-units') || '{}')); } catch(e){}
+const fmtH = h => UNITS.len === 'm' ? (Math.round(h*10)/10) + ' m' : (h/0.3048).toFixed(1).replace('.0','') + ' ft';
+const fmtW = mph => UNITS.wind === 'kph' ? Math.round(mph*1.609) + ' kph' : UNITS.wind === 'kn' ? Math.round(mph*0.869) + ' kn' : Math.round(mph) + ' mph';
+const fmtT = c => UNITS.temp === 'F' ? Math.round(c*9/5+32) + '°F' : Math.round(c) + '°C';
+const fmtTide = m => UNITS.len === 'm' ? (Math.round(m*10)/10) + ' m' : (Math.round(m/0.3048*10)/10) + ' ft';
 const hr = h => { h %= 24; const x = h%12||12; return x + (h<12?'am':'pm'); };   // 24 wraps to 12am
 const term = (t, def) => `<abbr title="${def}" data-def="${def}" tabindex="0" role="button">${t}</abbr>`;
 const tip = document.createElement('div'); tip.id = 'tip'; tip.hidden = true; tip.setAttribute('role', 'status'); document.body.appendChild(tip);
@@ -515,6 +606,13 @@ function fillWeek(pool){
   });
 }
 
+function tideTxt(){
+  const ev = (data.tides || []).filter(e => e.t.startsWith(data.date));
+  if (!ev.length) return 'not available here';
+  let now = '';
+  if (data.k === 0){ const i = data.rows.findIndex(r => !r.past), a = data.rows[i] && data.rows[i].tide, b = data.rows[i+1] && data.rows[i+1].tide; if (a != null && b != null) now = ` (now ${b > a ? 'rising' : 'falling'})`; }
+  return ev.map(e => `${e.hi ? 'High' : 'Low'} ${e.t.slice(11,16)}, ${fmtTide(e.h)}`).join('<br>') + now;
+}
 function render(){
   if (data.days){ const k = dayK ?? data.defK; Object.assign(data, data.days[k], {k}); }   // load the chosen day into data
   const {rows} = data;
@@ -535,7 +633,7 @@ function render(){
   const ref = win[0] || usable[0], s0 = Engine.score({...ref, daylight:true}, level) || {type:'cross'};
   const reasons = [];
   reasons.push(`Waves are ${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)}). ${ref.h > CONFIG.levels[level-1].maxH ? 'That is bigger than level '+level+' should handle.' : ref.h < CONFIG.levels[level-1].idealMin ? 'Small, so expect a slow, mellow session.' : 'A comfortable size for level '+level+'.'}`);
-  reasons.push(`Wind is ${s0.type==='offshore'?'blowing off the land (clean waves)':s0.type==='onshore'?'blowing onto the beach (choppy, messy waves)':'blowing along the beach (a bit bumpy)'} at ${Math.round(ref.windMph)} mph.`);
+  reasons.push(`Wind is ${s0.type==='offshore'?'blowing off the land (clean waves)':s0.type==='onshore'?'blowing onto the beach (choppy, messy waves)':'blowing along the beach (a bit bumpy)'} at ${fmtW(ref.windMph)}.`);
   if (ref.period >= 12) reasons.push(`Long ${term('swell period','Time between waves. Longer gaps mean more powerful waves.')} (${Math.round(ref.period)}s): waves will hit harder than they look.`);
   else if (ref.period < 5) reasons.push(`Short ${term('swell period','Time between waves. Longer gaps mean more powerful waves.')} (${Math.round(ref.period)}s): expect choppy, weak waves.`);
   if (!win.length) reasons.length = 0, reasons.push('Daylight is running out or conditions are unsuitable.');
@@ -554,14 +652,22 @@ function render(){
   const left = rows.filter(r => r.daylight && !r.past).length;
   const hz = Engine.hazards(ref, level, {sst, hoursLeft: data.k === 0 ? left : null});
   const heads = hz.length ? `<section class="card"><h3>Heads up</h3><ul class="heads">${hz.map(h => `<li>${h}</li>`).join('')}</ul></section>` : '';
+  const ex = Engine.explain({...ref, daylight:true}, level);
+  const exHTML = !ex ? '' : `<details class="explain"><summary>Explain this score</summary>
+    <p>Score at ${hr(ref.hour)}: <b>${ex.total} out of 100</b> for level ${level}. ${CONFIG.goodAt}+ is good, ${CONFIG.okAt} to ${CONFIG.goodAt - 1} is marginal, below ${CONFIG.okAt} is not ideal.${win.length ? ` Your best two-hour window averages ${mAvg}.` : ''}</p>
+    <ul>${ex.lines.map(l => `<li><b>${l.name}</b>: ${l.score}/100, worth ${l.pts} of ${l.weight} points. ${l.text}</li>`).join('')}</ul>
+    ${ex.notes.map(n => `<p>${n}</p>`).join('')}
+    ${ex.drag ? `<p>Biggest thing holding the score back: <b>${ex.drag.toLowerCase()}</b>.</p>` : '<p>Nothing is holding the score back much.</p>'}
+    <p class="legend">Points are rounded, so they may add up to one more or less than the total. These are forecast estimates, not a promise. Check with a lifeguard.</p></details>`;
   const t = x => x.slice(11,16);
 
-  $('out').innerHTML = `${fcFrom ? `<p class="legend">No wave data right at ${esc(place)}, so this uses the forecast at ${esc(fcFrom)}.</p>` : ''}
+  $('out').innerHTML = `${savedAt ? `<div class="err" role="status">Showing the forecast saved ${agoTxt(savedAt)}. It may be out of date. <button type="button" id="upd">Update now</button></div>` : ''}${fcFrom ? `<p class="legend">No wave data right at ${esc(place)}, so this uses the forecast at ${esc(fcFrom)}.</p>` : ''}
   <div class="verdict ${cls}" role="status">
     <h2 id="vtitle">${cls==='good'?'✓ ':cls==='ok'?'~ ':''}${title}</h2>
     <p class="for">${forYou}</p>
     <ul>${reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
-    <p class="cond"><b>Conditions ${data.label}:</b> ${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)}) waves · ${Math.round(ref.period)}s period · ${Math.round(ref.windMph)} mph ${s0.type} wind${sst!=null ? ' · '+Math.round(sst)+'°C water' : ''}</p>
+    <p class="cond"><b>Conditions ${data.label}:</b> ${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)}) waves · ${Math.round(ref.period)}s period · ${fmtW(ref.windMph)} ${s0.type} wind${sst!=null ? ' · '+fmtT(sst)+' water' : ''}</p>
+    ${exHTML}
     ${cls==='bad' ? '<div id="advice"><p class="adv">Checking which coast is better…</p></div>' : ''}
   </div>
   ${heads}
@@ -572,9 +678,11 @@ function render(){
   <section class="card"><h3>Conditions ${data.k ? data.label : 'now'}</h3><dl>
     <dt>Wave size</dt><dd>${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)})</dd>
     <dt>${term('Period','Seconds between wave crests. Beginners like 6 to 10.')}</dt><dd>${Math.round(ref.period)} seconds</dd>
-    <dt>Wind</dt><dd>${Math.round(ref.windMph)} mph, ${s0.type}</dd>
-    <dt>Water</dt><dd>${sst!=null ? Math.round(sst)+'°C: wear '+Engine.wetsuit(sst) : 'not available'}</dd>
-    <dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></dl></section>`;
+    <dt>Wind</dt><dd>${fmtW(ref.windMph)}, ${s0.type}</dd>
+    <dt>Water</dt><dd>${sst!=null ? fmtT(sst)+': wear '+Engine.wetsuit(sst) : 'not available'}</dd>
+    <dt>Tide</dt><dd>${tideTxt()}</dd>
+    <dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></dl>${data.tides && data.tides.length ? '<p class="legend">Tides are model estimates from hourly data, so times can be an hour or so out, and heights are against mean sea level. Check a local tide table.</p>' : ''}</section>`;
+  const ub = $('upd'); if (ub) ub.onclick = () => run(center.lat, center.lon, place);
   drawWeek();
   drawSpots();
 }
@@ -681,16 +789,46 @@ $('geo').addEventListener('click', () => {
 });
 
 /* ========= Run: forecast and beaches load side by side ========= */
+/* Last forecast, kept on this phone so the app still shows something with no signal. A cache: not backed up. */
+let savedAt = null;
+function saveForecast(lat, lon, name, d){
+  try { localStorage.setItem('sb-lastfc', JSON.stringify({t:Date.now(), lat, lon, name, d:{days:d.days, defK:d.defK, tides:d.tides, off:d.off || 0}})); } catch(e){}
+}
+function readSaved(){ try { const c = JSON.parse(localStorage.getItem('sb-lastfc') || 'null'); return c && c.d && Array.isArray(c.d.days) ? c : null; } catch(e){ return null; } }
+function freshen(d){   // age a saved forecast: drop days gone by, recompute which hours are past, relabel today and tomorrow
+  const now = new Date(Date.now() + (d.off || 0) * 1000).toISOString().slice(0, 16), today = now.slice(0, 10);
+  const days = d.days.filter(x => x.date >= today); if (!days.length) return null;
+  days.forEach(x => {
+    const n = Math.round((Date.parse(x.date) - Date.parse(today)) / 864e5);
+    x.label = n === 0 ? 'today' : n === 1 ? 'tomorrow' : 'on ' + dayName(x.date, true);
+    x.rows.forEach(r => { r.past = r.t.slice(0, 13) < now.slice(0, 13); });
+  });
+  const defK = days[0].rows.some(r => r.daylight && !r.past) || !days[1] ? 0 : 1;
+  return {...days[defK], days, defK, k:defK, tides:(d.tides || []).filter(t => t.t.slice(0, 13) >= now.slice(0, 13)), off:d.off};
+}
+const agoTxt = t => { const m = Math.round((Date.now() - t) / 60000); return m < 2 ? 'just now' : m < 90 ? m + ' minutes ago' : m < 2880 ? Math.round(m / 60) + ' hours ago' : Math.round(m / 1440) + ' days ago'; };
+function showSaved(c){   // show the saved forecast for a place, with a banner saying so; null if it is too old to use
+  const d = freshen(c.d); if (!d || !hasWaves(d)) return false;
+  place = c.name; center = {lat:c.lat, lon:c.lon}; data = d; savedAt = c.t; dayK = null; weekK = null; spotsData = null;
+  $('where').innerHTML = `Surf near <b>${esc(c.name)}</b>`;
+  spotsMsg = '<h3>Nearby beaches</h3><p class="legend">Beaches load when you are online. <button type="button" id="retry">Load beaches now</button></p>';
+  render(); return true;
+}
+
 async function run(lat, lon, name){
   const id = ++runId; spotRun++; showN = 5;
-  triedQ.clear(); enrichRun++; place = name; center = {lat, lon}; data = null; dayK = null; weekK = null; $('sq').value = ''; spotsData = null; spotsMsg = ''; fcFrom = null;
+  triedQ.clear(); enrichRun++; place = name; center = {lat, lon}; data = null; dayK = null; weekK = null; $('sq').value = ''; spotsData = null; spotsMsg = ''; fcFrom = null; savedAt = null;
   $('out').innerHTML = '<div class="skel" aria-label="Loading"></div>';
   $('spots').hidden = false; drawSpots();
   const fcP = loadForecast(lat, lon).then(d => ({d}), e => ({e}));
   const spP = Promise.race([findSpots(lat, lon), new Promise((_, rej) => setTimeout(() => rej(new Error('timed out')), 35000))]).then(l => ({l}), e => ({e}));
   const fc = await fcP; if (id !== runId) return;
-  if (fc.e) $('out').innerHTML = `<div class="err">Couldn't load the forecast (${esc(fc.e.message)}). Check your connection and try again.</div>`;
-  else if (hasWaves(fc.d)){ data = fc.d; render(); }
+  if (fc.e){
+    const sv = readSaved(), d = sv && hav(lat, lon, sv.lat, sv.lon) < 10 ? freshen(sv.d) : null;   // same place, still usable
+    if (d && hasWaves(d)){ data = d; savedAt = sv.t; render(); }
+    else $('out').innerHTML = `<div class="err">Couldn't load the forecast (${esc(fc.e.message)}). Check your connection and try again.</div>`;
+  }
+  else if (hasWaves(fc.d)){ data = fc.d; render(); saveForecast(lat, lon, name, fc.d); }
   else $('out').innerHTML = `<div class="err">There's no wave data right at ${esc(name)}, so it may not be on the coast. Looking for surf beaches nearby…</div>`;
   const sp = await spP; if (id !== runId) return;
   if (sp.e){
@@ -856,7 +994,7 @@ const unitLbl = {mi:'miles', km:'km', min:'minutes drive'};
 const reachKm = () => Math.min(120, Math.max(2, reach.unit === 'mi' ? reach.n*1.609 : reach.n));   // search radius; for minutes it's a generous straight-line guess, then real drive times filter
 const inReach = s => reach.unit === 'min' ? s.min <= reach.n : s.km <= reach.n * (reach.unit === 'mi' ? 1.609 : 1);
 const dist = km => reach.unit === 'mi' ? (km/1.609).toFixed(0) + ' mi' : km.toFixed(0) + ' km';
-const roughFt = h => '~' + String(Math.round(h/0.3048*2)/2) + ' ft';
+const roughFt = h => UNITS.len === 'm' ? '~' + String(Math.round(h*2)/2) + ' m' : '~' + String(Math.round(h/0.3048*2)/2) + ' ft';
 const reachHTML = () => `<div class="reach"><label for="rn">Travel up to</label><input id="rn" type="number" inputmode="numeric" min="1" max="200" value="${reach.n}"><select id="ru" aria-label="Distance unit">${Object.entries(unitLbl).map(([k,v]) => `<option value="${k}"${k===reach.unit?' selected':''}>${v}</option>`).join('')}</select></div>`;
 function bindReach(){
   const ch = $('chips'), on = ch && ch.querySelector('[aria-pressed=true]'); if (on) ch.scrollLeft = on.offsetLeft - (ch.clientWidth - on.offsetWidth)/2;   // keep the chosen day in view
@@ -914,13 +1052,15 @@ function adviseCoasts(all){
 function drawSpots(){
   const box = $('spots'); if (!box) return;
   if (fsOn) setFs(false, true);
+  const keepV = holdView && userMoved && map ? {c:map.getCenter(), z:map.getZoom()} : null;   // background fill-in: keep the view the person chose
+  holdView = false; userMoved = false;
   if (map){ map.remove(); map = null; }
   const head = ctlHTML() + reachHTML();   // travel distance is always on show
   fillBeachSelect();
   if (!spotsData || !data){
     box.innerHTML = head + (spotsMsg || '<h3>Finding beaches nearby…</h3><p class="legend">Asking the free map servers. This can take up to 30 seconds.</p><div class="skel"></div>');
     if (spotsMsg && $('advice')) $('advice').innerHTML = '';
-    if (spotsMsg && $('vtitle')) $('vtitle').textContent = '○ Not ideal here';   // beaches failed: don't leave "finding…" up
+    if (spotsMsg && $('advice') && $('vtitle')) $('vtitle').textContent = '○ Not ideal here';   // beaches failed: don't leave "finding…" up
     bindReach(); const rb = $('retry'); if (rb) rb.onclick = () => run(center.lat, center.lon, place);
     return;
   }
@@ -929,7 +1069,7 @@ function drawSpots(){
   if (!pool.length){ adviseCoasts([]); box.innerHTML = head + `<h3>Nearby beaches</h3><p>No surf beaches found within ${reach.n} ${unitLbl[reach.unit]}. Try a bigger distance, or a coastal town.</p>`; bindReach(); return; }
   const here = bestFor(level).b.avg;
   const all = pool.map(s => ({s, r:scoreSpot(s, level)}))
-    .sort((a,b) => (b.r.total - b.s.min*CONFIG.drivePenaltyPerMin) - (a.r.total - a.s.min*CONFIG.drivePenaltyPerMin));
+    .sort((a,b) => (isFav(b.s) - isFav(a.s)) || (b.r.total - b.s.min*CONFIG.drivePenaltyPerMin) - (a.r.total - a.s.min*CONFIG.drivePenaltyPerMin));
   adviseCoasts(all);
   const q = ($('sq').value || '').trim().toLowerCase();
   const found = q ? spotsData.filter(s => (s.name || '').toLowerCase().includes(q)).map(s => ({s, r:scoreSpot(s, level)})).sort((a,b) => b.r.total - a.r.total) : null;
@@ -947,8 +1087,9 @@ function drawSpots(){
     const big = !r.none && r.h > CONFIG.levels[level-1].maxH ? ' ⚠ Bigger than level '+level+' should handle.' : '';
     const cond = r.none ? '' : `<span class="ln">${roughFt(r.h)} waves (${Engine.bodyHeight(r.h)}) · ${Math.round(r.period)}s swell period</span>`;
     const when = r.none ? '' : `best ${hr(r.win[0].hour)} to ${hr(r.win[1].hour+1)} · `;
-    return `<button type="button" class="spot" data-i="${i}"><b>${found ? '' : '#'+(i+1)+' '}${esc(s.name)}</b><span class="tag ${b}">${tag}</span>${cond}
-      <span class="ln">${when}about ${s.min} min drive${s.est?' (estimate)':''} · ${dist(s.km)}</span><small>${shelter}${wind}${big}</small></button>`;
+    const fav = isFav(s), note = fav && favs[favKey(s)].note;
+    return `<div class="spotw"><button type="button" class="fav" data-fav="${favKey(s)}" aria-pressed="${fav}" aria-label="${fav ? 'Remove from favourites' : 'Add to favourites'}">${fav ? '★' : '☆'}</button><button type="button" class="spot" data-i="${i}"><b>${found ? '' : '#'+(i+1)+' '}${esc(s.name)}</b><span class="tag ${b}">${tag}</span>${cond}
+      <span class="ln">${when}about ${s.min} min drive${s.est?' (estimate)':''} · ${dist(s.km)}</span><small>${shelter}${wind}${big}</small></button>${fav ? `<button type="button" class="link" data-note="${favKey(s)}">${note ? '✎ Edit note' : '✎ Add a note'}</button>` : ''}${note ? `<p class="legend">📝 ${esc(note)}</p>` : ''}</div>`;
   }).join('');
   const more = !found && all.length > showN ? `<button type="button" class="spot" id="more">Show more beaches (${all.length-showN} more)</button>` : '';
   box.innerHTML = head + `<h3>${title}</h3><p>${intro}</p><p class="legend">${data.k===0 ? 'Today' : data.k===1 ? 'Tomorrow' : dayName(data.date, true)}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()}. Showing ${ranked.length} of ${all.length} beaches within ${reach.n} ${unitLbl[reach.unit]}. The map shows every beach in range.</p><div id="map" role="region" aria-label="Map of nearby beaches"></div>${cards}${more}
@@ -957,6 +1098,8 @@ function drawSpots(){
   if (typeof L === 'undefined'){ $('map').outerHTML = '<p class="legend">Map couldn’t load (check your connection).</p>'; return; }
   map = L.map('map', {scrollWheelZoom:false, preferCanvas:true});
   addFsControl();
+  ['pointerdown','wheel'].forEach(ev => map.getContainer().addEventListener(ev, () => { userMoved = true; }, {passive:true}));
+  if (keepV) userMoved = true;
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18, attribution:'© OpenStreetMap contributors'}).addTo(map);
   L.circleMarker([center.lat, center.lon], {radius:7, color:'#fff', weight:2, fillColor:'#0c2a31', fillOpacity:1}).addTo(map).bindTooltip('You searched here');
   const onMap = [...ranked, ...all.filter(x => !ranked.some(y => y.s === x.s))];   // the map shows every beach, the list only the top ones
@@ -974,15 +1117,33 @@ function drawSpots(){
   map.on('moveend zoomend', drawPills);
   const m0 = map;
   mapFit = () => { if (onMap.length) m0.fitBounds(L.latLngBounds([[center.lat, center.lon], ...onMap.map(x => [x.s.lat, x.s.lon])]).pad(0.15)); else m0.setView([center.lat, center.lon], 11); };
-  mapFit(); drawPills(); setTimeout(() => { if (m0 === map && !fsOn){ m0.invalidateSize(); mapFit(); } }, 150);   // size the map once the card has laid out
+  const showV = () => keepV ? m0.setView(keepV.c, keepV.z, {animate:false}) : mapFit();
+  showV(); drawPills(); setTimeout(() => { if (m0 === map && !fsOn){ m0.invalidateSize(); showV(); } }, 150);   // size the map once the card has laid out
   box.querySelectorAll('.spot[data-i]').forEach(el => el.addEventListener('click', () => {
     const m = markers[+el.dataset.i]; map.setView(m.getLatLng(), 14); m.openPopup(); $('map').scrollIntoView({block:'center'});
   }));
 }
 
 /* ========= All beaches: dropdown, background fill-in, live lookup, full-screen map ========= */
-let searching = '', enrichRun = 0, pendingRedraw = false, mapFit = null, fsOn = false, fsHome = null, fsBtn = null;
+let searching = '', enrichRun = 0, userMoved = false, holdView = false, pendingRedraw = false, mapFit = null, fsOn = false, fsHome = null, fsBtn = null;
 const triedQ = new Set();
+const favKey = s => s.lat.toFixed(3) + ',' + s.lon.toFixed(3);
+let favs = {}; try { favs = JSON.parse(localStorage.getItem('sb-favs') || '{}'); } catch(e){}
+const isFav = s => favKey(s) in favs;
+const saveFavs = () => { try { localStorage.setItem('sb-favs', JSON.stringify(favs)); } catch(e){} };
+$('spots').addEventListener('click', e => {   // star a beach, or add a note to a starred one
+  const f = e.target.closest('button[data-fav]'), n = e.target.closest('button[data-note]');
+  if (f){
+    const k = f.dataset.fav;
+    if (k in favs) delete favs[k];
+    else { const s = [...(spotsData || []), ...((spotsData && spotsData.rest) || [])].find(x => favKey(x) === k); favs[k] = {name:s ? s.name : 'Beach', note:''}; }
+    saveFavs(); keepPlace('spots', drawSpots);
+  } else if (n){
+    const k = n.dataset.note; if (!favs[k]) return;
+    const t = window.prompt('Note for ' + favs[k].name + ' (parking, best tide, who to bring):', favs[k].note || '');
+    if (t !== null){ favs[k].note = t.trim().slice(0, 200); saveFavs(); keepPlace('spots', drawSpots); }
+  }
+});
 const KNOWN = [{name:'Gwithian Beach', lat:50.2285, lon:-5.392, key:'gwithian'}];   // popular beaches the free map data sometimes leaves out
 const MAXB = 100;
 function addKnown(list){
@@ -1030,7 +1191,7 @@ async function enrichRest(){   // quietly check the rest of the beaches so every
   }
   if (!changed || !live()) return;
   if (fsOn){ pendingRedraw = true; return; }
-  keepPlace('spots', drawSpots);
+  holdView = true; keepPlace('spots', drawSpots);
 }
 
 async function lookupBeach(q){   // a beach the first search missed: ask the map servers for it by name
@@ -1087,7 +1248,7 @@ function setFs(on, quiet){   // full-screen map: the map box moves to the page b
   }
   if (fsBtn){ fsBtn.innerHTML = on ? ICON_X : ICON_FS; fsBtn.setAttribute('aria-label', on ? 'Close full screen map' : 'Full screen map'); }
   const m = map; [60, 350].forEach(t => setTimeout(() => { if (m === map) m.invalidateSize(); }, t));
-  if (!on && pendingRedraw && !quiet){ pendingRedraw = false; drawSpots(); }
+  if (!on && pendingRedraw && !quiet){ pendingRedraw = false; holdView = true; drawSpots(); }
 }
 function toggleFs(){
   if (fsOn){ if (history.state && history.state.fs) history.back(); else setFs(false); }
@@ -1264,7 +1425,7 @@ $('prog').addEventListener('toggle', e => { const d = e.target; if (d.dataset &&
 const ic = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const TABS = [
   {id:'today', label:'Today', icon:ic('<circle cx="12" cy="6.5" r="2.5"/><path d="M2 13c2.5 0 2.5-2.5 5-2.5S9.5 13 12 13s2.5-2.5 5-2.5S19.5 13 22 13M2 18.5c2.5 0 2.5-2.5 5-2.5s2.5 2.5 5 2.5 2.5-2.5 5-2.5 2.5 2.5 5 2.5"/>'), strip:true}, {id:'week', label:'Week', icon:ic('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'), strip:true},
-  {id:'beaches', label:'Beaches', icon:ic('<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'), strip:true}, {id:'skills', label:'Skills', icon:ic('<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>')}, {id:'more', label:'More', icon:ic('<circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/>')}];
+  {id:'beaches', label:'Beaches', icon:ic('<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'), strip:true}, {id:'skills', label:'Skills', icon:ic('<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>')}, {id:'kit', label:'Kit & log', icon:ic('<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M9 8V6a3 3 0 0 1 6 0v2M4 13h16"/>')}, {id:'more', label:'More', icon:ic('<circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/>')}];
 $('nav').innerHTML = TABS.map(t => `<button type="button" data-t="${t.id}"><span aria-hidden="true">${t.icon}</span>${t.label}</button>`).join('');
 $('nav').addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(b.dataset.t); });
 function go(id){
@@ -1274,6 +1435,7 @@ function go(id){
   $('nav').querySelectorAll('button').forEach(b => b.setAttribute('aria-current', b.dataset.t === t.id ? 'page' : 'false'));
   if (t.id === 'beaches' && data && spotsData) drawSpots();   // the map needs a visible box to size itself
   if (t.id === 'skills') drawChecks();
+  if (t.id === 'kit' && $('gt')) gearOpen();   // the panel is built a little further down on first load
   window.scrollTo(0, 0);
   try { history.replaceState(null, '', '#' + t.id); } catch(e){}
 }
@@ -1318,17 +1480,24 @@ $('f-gear').innerHTML = `<h4>Board finder</h4><div class="fld"><label>Weight (kg
 <h4>Essentials (tick what you own)</h4>${GEAR.map((t,i) => `<label class="tick"><input type="checkbox" data-g="${i}"${load('sb-gear').includes(i) ? ' checked' : ''}> ${t}</label>`).join('')}
 <h4>Brand ideas</h4><p><b>Foam boards:</b> Budget: Wavestorm, cheap and forgiving. Mid: Softech, better build. Premium: Catch Surf, more fun once you’re riding.</p><p><b>Wetsuits:</b> Budget: Olaian (Decathlon). Mid: Rip Curl, O’Neill. Premium: Patagonia.</p><p><b>Leashes and traction:</b> FCS and Dakine are reliable. <b>Wax:</b> Sex Wax or Mr Zogs.</p><p class="legend">Editorial suggestions, not sponsored. Check current prices, reviews and fit.</p>`;
 function gearCalc(){
-  const w = +$('gw').value, h = +$('gh').value, t = $('gt').value === '' ? null : +$('gt').value;
+  const w = +$('gw').value, h = +$('gh').value, tIn = $('gt').value === '' ? null : +$('gt').value, t = tIn == null ? null : UNITS.temp === 'F' ? (tIn - 32) * 5 / 9 : tIn;   // the wetsuit table below works in °C
   const F = [[1.1,1.3],[.95,1.1],[.8,.95],[.65,.8],[.55,.65]][level-1], X = [[55,75],[55,75],[35,55],[15,35],[0,20]][level-1];
   const ft = cm => { const i = Math.round(cm/2.54); return `${Math.floor(i/12)}’${i%12}”`; };
   $('gb').innerHTML = w > 0 ? `<b>Level ${level}:</b> about ${Math.round(w*F[0])} to ${Math.round(w*F[1])} litres${h > 0 ? `, roughly ${ft(h+X[0])} to ${ft(h+X[1])} long` : ''}. ${['A soft-top foam board','A foam or soft-top funboard','A funboard or mini-mal','A fish or hybrid','A shortboard or hybrid'][level-1]}. ${['Rent for now.','Rent, or buy a cheap foam board.','Buy a used funboard.','Buy.','Buy.'][level-1]} In small, weak surf choose the top of the range.` : 'Enter your weight to see a board size.';
   const W = [[20,'a rash vest or shorty'],[17,'a 2 mm shorty or 3/2 mm steamer'],[14,'a 3/2 mm steamer'],[11,'a 4/3 mm steamer plus boots'],[8,'a 5/4 mm hooded steamer, boots and gloves'],[-99,'a 5/4/3 mm hooded winter suit, thick boots and gloves']];
   const m = t == null ? null : W.find(x => t >= x[0]);
-  $('gs').textContent = m ? `At ${t}°C wear ${m[1]}. Windy days feel colder, so go one step warmer.` : 'Enter the water temperature.';
+  $('gs').textContent = m ? `At ${tIn}°${UNITS.temp} wear ${m[1]}. Windy days feel colder, so go one step warmer.` : 'Enter the water temperature.';
 }
+const gearTempLbl = () => { $('gt').parentNode.firstChild.textContent = 'Water temperature (°' + UNITS.temp + ')'; };
+gearTempLbl();
 $('f-gear').addEventListener('input', gearCalc);
 $('f-gear').addEventListener('change', e => { const c = e.target; if (c.dataset.g == null) return; const on = load('sb-gear').filter(i => i !== +c.dataset.g); if (c.checked) on.push(+c.dataset.g); store('sb-gear', on); });
-const gd = $('f-gear').parentElement; gd.addEventListener('toggle', () => { if (!gd.open) return; const r = data && data.rows.find(x => x.sst != null); if ($('gt').value === '' && r) $('gt').value = Math.round(r.sst); gearCalc(); });
+$('kitseg').addEventListener('click', e => {   // one section at a time: Gear, Session log or Share
+  const b = e.target.closest('button'); if (!b) return;
+  ['gear','log','share'].forEach(k => { $('k-' + k).hidden = k !== b.dataset.k; });
+  $('kitseg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+});
+function gearOpen(){ const r = data && data.rows.find(x => x.sst != null); if ($('gt').value === '' && r) $('gt').value = Math.round(r.sst); gearCalc(); }   // water temp comes from the forecast
 // Session log
 let logCond = null;
 function drawLog(){
@@ -1352,7 +1521,77 @@ $('f-share').innerHTML = '<p>Send a friend a link that opens the same beach and 
 $('sh').onclick = () => { if (!place){ $('shm').textContent = 'Search a beach or town first.'; return; } shareIt(`Should I go surfing near ${place}? Open this to see the forecast at level ${level}:`); };
 const gm = /^#go=([-\d.]+),([-\d.]+),([1-5]),(.+)$/.exec(GOHASH);
 if (gm) setTimeout(() => { level = +gm[3]; drawLevels(); run(+gm[1], +gm[2], decodeURIComponent(gm[4])); go('today'); }, 0);   // open a shared link
+else { const sv = readSaved(); if (sv) setTimeout(() => {   // reopen on the last place: update it if online, otherwise show what was saved
+  if (navigator.onLine !== false){ $('where').innerHTML = `Surf near <b>${esc(sv.name)}</b>`; run(sv.lat, sv.lon, sv.name); }
+  else showSaved(sv);
+}, 0); }
 drawLevels(); drawWhens();
+const UOPT = {len:['ft','m'], wind:['mph','kph','kn'], temp:['C','F']}, ULBL = {len:'Wave height', wind:'Wind speed', temp:'Temperature'};
+function drawUnits(){
+  $('units').innerHTML = Object.keys(UOPT).map(k => `<p class="wl">${ULBL[k]}</p><div class="whens" style="grid-template-columns:repeat(${UOPT[k].length},1fr)" role="group" aria-label="${ULBL[k]} unit">${UOPT[k].map(v => `<button type="button" aria-pressed="${UNITS[k] === v}" data-k="${k}" data-v="${v}">${k === 'temp' ? '°' + v : v}</button>`).join('')}</div>`).join('');
+}
+$('units').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const oldT = UNITS.temp;
+  UNITS[b.dataset.k] = b.dataset.v;
+  if (b.dataset.k === 'temp' && oldT !== UNITS.temp){   // keep the wetsuit finder in step: convert what was typed
+    const g = $('gt'), v = g.value === '' ? null : +g.value;
+    if (v != null){ const c = oldT === 'F' ? (v - 32) * 5 / 9 : v; g.value = String(Math.round(UNITS.temp === 'F' ? c * 9 / 5 + 32 : c)); }
+    gearTempLbl(); gearCalc();
+  }
+  try { localStorage.setItem('sb-units', JSON.stringify(UNITS)); } catch(err){}
+  drawUnits(); if (data) render();   // redraws Today, Week and Beaches in the new units
+});
+drawUnits();
+const GL_EXTRA = {swell:'Rolling lines of energy made by wind far away. It is what makes waves at the beach.', 'swell period':'Seconds between waves. Longer means more powerful.', offshore:'Wind blowing from the land out to sea. It keeps waves clean and tidy.', onshore:'Wind blowing from the sea onto the land. It makes waves choppy and messy.', 'cross-shore':'Wind blowing along the beach, sideways to the waves.', tide:'The sea level rising and falling twice a day. It changes how and where waves break.', leash:'The cord that joins your ankle to your board so it stays close.', 'drop in':'Taking off on a wave that another surfer is already riding. It is dangerous and rude.', priority:'The right to ride a wave. The surfer closest to the peak, or the one up first, has it.', 'wind wave':'A small, messy wave made by local wind, rather than swell from far away.', '3/2 wetsuit':'A wetsuit that is 3 mm thick on the body and 2 mm on the arms and legs.', 'take-off':'The moment you catch a wave and stand up.'};
+function drawGlossary(){
+  const all = Object.assign({}, GL, GL_EXTRA);
+  $('glos').innerHTML = '<dl>' + Object.keys(all).sort((a,b) => a.localeCompare(b)).map(k => `<dt>${esc(k.charAt(0).toUpperCase() + k.slice(1))}</dt><dd style="font-weight:400">${esc(all[k])}</dd>`).join('') + '</dl>';
+}
+drawGlossary();
+$('skseg').addEventListener('click', e => {   // Skills: My level and progress / Learn
+  const b = e.target.closest('button'); if (!b) return;
+  $('sk-main').hidden = b.dataset.k !== 'main'; $('sk-learn').hidden = b.dataset.k !== 'learn';
+  $('skseg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+});
+/* ===== Back up and restore: everything the app saves on this device (not the beach caches) ===== */
+const mineKeys = () => Object.keys(localStorage).filter(k => k.startsWith('sb-') && k !== 'sb-face2' && k !== 'sb-lastfc' && !k.startsWith('sb-spots'));
+$('bkSave').onclick = () => {
+  const out = {app:'surf-beginner', saved:new Date().toISOString(), version:VERSION, data:{}};
+  mineKeys().forEach(k => { out.data[k] = localStorage.getItem(k); });
+  const n = Object.keys(out.data).length;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(out)], {type:'application/json'}));
+  a.download = 'surf-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  $('bkMsg').textContent = n ? `Saved ${n} items to ${a.download}. Check your Downloads.` : 'Nothing to save yet.';
+};
+$('bkLoad').onclick = () => $('bkFile').click();
+$('bkFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const j = JSON.parse(await f.text());
+    if (!j || j.app !== 'surf-beginner' || !j.data || typeof j.data !== 'object') throw new Error('not a backup from this app');
+    const keys = Object.keys(j.data).filter(k => k.startsWith('sb-') && k !== 'sb-face2' && k !== 'sb-lastfc' && !k.startsWith('sb-spots') && typeof j.data[k] === 'string');
+    if (!keys.length) throw new Error('the file has no saved data');
+    if (!confirm(`Restore ${keys.length} items from this backup? It replaces what is saved on this phone now.`)) return;
+    keys.forEach(k => { try { JSON.parse(j.data[k]); } catch(err){ return; } localStorage.setItem(k, j.data[k]); });   // only valid saved values go in
+    $('bkMsg').textContent = 'Restored. Reloading…'; setTimeout(() => location.reload(), 600);
+  } catch(err){ $('bkMsg').textContent = 'Could not restore: ' + err.message + '.'; }
+};
+/* ===== Offline and install: sw.js and manifest.webmanifest sit next to this file ===== */
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+let instEv = null;
+if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) $('inst').hidden = true;   // already installed
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); instEv = e; $('instBtn').hidden = false; $('instTxt').hidden = true; });
+$('instBtn').onclick = async () => { if (!instEv) return; instEv.prompt(); try { await instEv.userChoice; } catch(e){} instEv = null; $('instBtn').hidden = true; $('instTxt').hidden = false; };
+addEventListener('appinstalled', () => { $('inst').hidden = true; });
+$('bkWipe').onclick = () => {
+  if (!confirm('Delete your level, progress, favourites, notes, gear ticks, session log and settings from this device? This cannot be undone. Tip: save a backup first.')) return;
+  mineKeys().concat(['sb-face2', 'sb-lastfc']).forEach(k => localStorage.removeItem(k));
+  Object.keys(localStorage).filter(k => k.startsWith('sb-spots')).forEach(k => localStorage.removeItem(k));
+  $('bkMsg').textContent = 'Deleted. Reloading…'; setTimeout(() => location.reload(), 600);
+};
 </script>
 </body>
 </html>

@@ -1,0 +1,15 @@
+{
+  "name": "Shorebreak: surf guide for beginners",
+  "short_name": "Shorebreak",
+  "description": "Plain-English surf forecasts for beginners: is it right for your level, where to go, what to bring.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef5f4",
+  "theme_color": "#0f6b75",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
