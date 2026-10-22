@@ -12,7 +12,7 @@
 *{box-sizing:border-box}
 html{font-size:18px}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Avenir Next","Segoe UI",system-ui,sans-serif;line-height:1.5}
-main{max-width:640px;margin:0 auto;padding:16px 16px 56px}
+main{max-width:640px;margin:0 auto;padding:16px 16px 96px}
 h1{font-family:"Iowan Old Style",Georgia,serif;font-size:1.7rem;margin:8px 0 2px;letter-spacing:-.01em}
 .sub{color:var(--mute);margin:0 0 16px;font-size:.9rem}
 .row{display:flex;gap:8px;flex-wrap:wrap}
@@ -105,8 +105,14 @@ button:disabled{opacity:.5;cursor:default}
 .days button.link{min-height:40px;padding:8px 2px 0;font-size:.85rem}
 @media (prefers-color-scheme:dark){.leaflet-tile-pane{filter:brightness(.8) saturate(.9)}}
 abbr[data-def]{cursor:pointer}
-#tip{position:fixed;left:12px;right:12px;bottom:12px;max-width:616px;margin:0 auto;background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:12px;font-size:.9rem;z-index:2000;box-shadow:0 4px 18px #0006}
+#tip{position:fixed;left:12px;right:12px;bottom:76px;max-width:616px;margin:0 auto;background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:12px;font-size:.9rem;z-index:2000;box-shadow:0 4px 18px #0006}
 .heads{margin:0;padding-left:1.1em}.heads li{margin:6px 0}
+#nav{position:fixed;left:0;right:0;bottom:0;z-index:1500;display:flex;justify-content:center;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+#nav button{flex:1;max-width:128px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:58px;border:0;border-radius:0;background:none;color:var(--mute);font-size:.72rem;font-weight:600}
+#nav button span{font-size:1.25rem;line-height:1}
+#nav button[aria-current=page]{color:var(--teal);box-shadow:inset 0 3px 0 var(--teal)}
+#out:empty::before,#week:empty::before{content:'Search for a beach or town above, or tap Use my location.';display:block;color:var(--mute);padding:12px 0}
+.empty{color:var(--mute)}#spots:not([hidden]) + .empty{display:none}
 </style>
 </head>
 <body>
@@ -124,18 +130,25 @@ abbr[data-def]{cursor:pointer}
 <ul class="sugg" id="sugg" role="listbox" aria-label="Matching places" hidden></ul>
 <p class="where" id="where" aria-live="polite"></p>
 
+<div id="strip">
 <div class="levels" id="levels" role="group" aria-label="Your surf level"></div>
 <p class="lvname" id="lvname"></p>
-<p class="wl">Time of day</p>
 <div class="whens" id="when" role="group" aria-label="Time of day"></div>
-<button type="button" id="qbtn">Not sure of your level? Take the 1-minute quiz</button>
-<div id="quiz" aria-live="polite"></div>
+</div>
 
-<div id="out" aria-live="polite"></div>
-<section class="card" id="spots" hidden></section>
-
-<p class="note">Forecasts are estimates. The main verdict judges wind against the swell direction; the nearby beaches use their own angles, estimated from the coastline. Always check with local lifeguards and signage before you paddle out.<br>Data: Open-Meteo (marine and weather), OpenStreetMap contributors (map and beaches, via Photon and Overpass), Copernicus DEM via Open-Meteo (beach angles), OSRM (drive times), Leaflet (map).</p>
+<div class="tab" id="t-today"><div id="out" aria-live="polite"></div><p class="note">Forecasts are estimates. Always check with local lifeguards and signage.</p></div>
+<div class="tab" id="t-week" hidden><div id="week"></div></div>
+<div class="tab" id="t-beaches" hidden><section class="card" id="spots" hidden></section><p class="empty">Search for a beach or town above to see nearby beaches.</p></div>
+<div class="tab" id="t-skills" hidden>
+  <section class="card"><h3>Your level</h3><p>Your level sets what counts as good for you: the wave size limits, which beaches are shown and how cautious the advice is. Change it with the 1 to 5 buttons at the top of Today, Week or Beaches.</p><button type="button" id="qbtn">Not sure of your level? Take the 1-minute quiz</button><div id="quiz" aria-live="polite"></div></section>
+  <section class="card"><h3>Progress checklists</h3><p>Coming soon: skills to tick off, drills to practise, level-ups and a “conditions felt too big” button.</p></section>
+</div>
+<div class="tab" id="t-more" hidden>
+  <section class="card"><h3>Coming soon</h3><p>Safety Center, Etiquette and lineup rules, Gear Guide, Session Log, and a shareable “Should I go?” link.</p></section>
+  <p class="note">Forecasts are estimates. The main verdict judges wind against the swell direction; the nearby beaches use their own angles, estimated from the coastline. Always check with local lifeguards and signage before you paddle out.<br>Data: Open-Meteo (marine and weather), OpenStreetMap contributors (map and beaches, via Photon and Overpass), Copernicus DEM via Open-Meteo (beach angles), OSRM (drive times), Leaflet (map).</p>
+</div>
 </main>
+<nav id="nav" aria-label="Sections"></nav>
 
 <script>
 /* ========= Scoring engine: pure functions, all tunable numbers live in CONFIG ========= */
@@ -291,7 +304,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.13.1 · 21 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.15 · 21 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -335,7 +348,7 @@ function weekHTML(){
     const lead = k === 0 ? 'Today, ' : k === 1 ? 'Tomorrow, ' : '';
     const trust = trustTxt[CONFIG.trust[Math.min(k, CONFIG.trust.length-1)]];
     const canShow = d.rows.some(x => x.daylight && !x.past && x.h != null);
-    const show = !canShow ? '' : k === data.k ? '<small>Showing this day above</small>' : `<button type="button" class="link" data-d="${k}">Show this day</button>`;
+    const show = !canShow ? '' : k === data.k ? '<small>Showing on the Today tab</small>' : `<button type="button" class="link" data-d="${k}">Show this day</button>`;
     if (!d.rows.some(x => x.h != null)) return `<li><b>${lead}${nm}</b><small>No wave data for this day.</small></li>`;
     if (!r) return `<li><b>${lead}${nm}</b><span class="tag calm">○ ${k===0 && d.rows.every(x => x.past || !x.daylight) ? 'Daylight is over' : 'No suitable window'}</span>${trust ? `<small>${trust}</small>` : ''}${show}</li>`;
     const band = Engine.band(Math.round(adj[k])), x = r.row;
@@ -424,8 +437,8 @@ function render(){
     <dt>${term('Period','Seconds between wave crests. Beginners like 6 to 10.')}</dt><dd>${Math.round(ref.period)} seconds</dd>
     <dt>Wind</dt><dd>${Math.round(ref.windMph)} mph, ${s0.type}</dd>
     <dt>Water</dt><dd>${sst!=null ? Math.round(sst)+'°C: wear '+Engine.wetsuit(sst) : 'not available'}</dd>
-    <dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></dl></section>
-  ${weekHTML()}`;
+    <dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></dl></section>`;
+  $('week').innerHTML = weekHTML();
   drawSpots();
 }
 
@@ -671,13 +684,13 @@ function setDay(k, anchor){
   dayK = k; keepPlace(anchor, () => { if (data) render(); });
   if (anchor === 'out') $('out').scrollIntoView({block:'start'});
 }
-$('when').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setWhen(b.dataset.w, 'out'); });
+$('when').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setWhen(b.dataset.w, 'strip'); });
 $('spots').addEventListener('click', e => {   // day and time pickers inside the beaches card
   const b = e.target.closest('button'); if (!b || b.disabled || !b.closest('.ctl')) return;
   if (b.dataset.d != null) setDay(+b.dataset.d, 'spots'); else if (b.dataset.w) setWhen(b.dataset.w, 'spots');
 });
-$('out').addEventListener('click', e => {   // "Show this day" in the week card
-  const b = e.target.closest('button[data-d]'); if (b) setDay(+b.dataset.d, 'out');
+$('week').addEventListener('click', e => {   // "Show this day" in the week card
+  const b = e.target.closest('button[data-d]'); if (b){ setDay(+b.dataset.d, 'week'); go('today'); }
 });
 function ctlHTML(){
   if (!data || !data.days) return '';
@@ -848,12 +861,29 @@ function quizResult(){
   $('quse').addEventListener('click', ()=>{
     level = L;
     try { localStorage.setItem('sb-level', level); } catch(e){}
-    drawLevels(); if (data) render(); $('quiz').innerHTML = '';
+    drawLevels(); if (data) render(); $('quiz').innerHTML = ''; go('today');
   });
   $('qretake').addEventListener('click', startQuiz);
 }
 function startQuiz(){ qi = 0; ans = []; quizStep(); }
 $('qbtn').addEventListener('click', startQuiz);
+
+/* ===== Tabs: to add a feature, add one line to TABS and one <div class="tab" id="t-NAME" hidden> panel ===== */
+const TABS = [
+  {id:'today', label:'Today', icon:'🌊', strip:true}, {id:'week', label:'Week', icon:'📅', strip:true},
+  {id:'beaches', label:'Beaches', icon:'📍', strip:true}, {id:'skills', label:'Skills', icon:'🏄'}, {id:'more', label:'More', icon:'☰'}];
+$('nav').innerHTML = TABS.map(t => `<button type="button" data-t="${t.id}"><span aria-hidden="true">${t.icon}</span>${t.label}</button>`).join('');
+$('nav').addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(b.dataset.t); });
+function go(id){
+  const t = TABS.find(x => x.id === id) || TABS[0];
+  TABS.forEach(x => { $('t-' + x.id).hidden = x.id !== t.id; });
+  $('strip').hidden = !t.strip;
+  $('nav').querySelectorAll('button').forEach(b => b.setAttribute('aria-current', b.dataset.t === t.id ? 'page' : 'false'));
+  if (t.id === 'beaches' && data && spotsData) drawSpots();   // the map needs a visible box to size itself
+  window.scrollTo(0, 0);
+  try { history.replaceState(null, '', '#' + t.id); } catch(e){}
+}
+go((location.hash || '').slice(1));
 drawLevels(); drawWhens();
 </script>
 </body>
