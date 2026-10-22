@@ -214,7 +214,7 @@ form.row button.go{background:var(--teal);color:var(--on)}
 
 #bsel[hidden]{display:none}#bsel{margin:8px 0 0}
 .mapfs-btn{width:44px;height:44px;min-height:44px;padding:0;margin:0;display:flex;align-items:center;justify-content:center;background:#fff;color:#111;border:0;border-radius:4px;cursor:pointer}
-#map.fs{position:fixed;inset:0;z-index:3000;width:100%;height:100vh;height:100dvh;margin:0;border:0;border-radius:0}
+#map.fs{position:fixed !important;inset:0 !important;z-index:3000;width:100% !important;height:100vh !important;height:100dvh !important;margin:0;border:0;border-radius:0}
 #map.fs .leaflet-top{top:env(safe-area-inset-top,0px)}#map.fs .leaflet-bottom{bottom:env(safe-area-inset-bottom,0px)}
 body.fs-lock{overflow:hidden}
 </style>
@@ -955,18 +955,26 @@ function drawSpots(){
     <p class="legend">Wave heights are rough estimates for each beach, worked out from its angle. Beach angles are estimated, so local knowledge matters. Ask a lifeguard or surf school.</p>`;
   bindReach(); const mb = $('more'); if (mb) mb.onclick = () => { showN += 5; drawSpots(); };
   if (typeof L === 'undefined'){ $('map').outerHTML = '<p class="legend">Map couldn’t load (check your connection).</p>'; return; }
-  map = L.map('map', {scrollWheelZoom:false});
+  map = L.map('map', {scrollWheelZoom:false, preferCanvas:true});
   addFsControl();
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18, attribution:'© OpenStreetMap contributors'}).addTo(map);
   L.circleMarker([center.lat, center.lon], {radius:7, color:'#fff', weight:2, fillColor:'#0c2a31', fillOpacity:1}).addTo(map).bindTooltip('You searched here');
   const onMap = [...ranked, ...all.filter(x => !ranked.some(y => y.s === x.s))];   // the map shows every beach, the list only the top ones
-  const markers = onMap.map(({s,r},i) => { const b = Engine.band(r.total);
-    return L.marker([s.lat, s.lon], {icon:L.divIcon({className:'', iconSize:[96,24], iconAnchor:[48,12],
-      html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'✕'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`}), zIndexOffset:1000-i}).addTo(map)
-      .bindPopup(`<b>${esc(s.name)}</b><br>${r.none ? '' : roughFt(r.h)+' waves · '+Math.round(r.period)+'s swell<br>'}About ${s.min} min drive`); });
+  const COL = {g:'#17653f', o:'#7a4d00', r:'#a3201a'}, pills = L.layerGroup().addTo(map), m1 = map;
+  const markers = onMap.map(({s,r}) => L.circleMarker([s.lat, s.lon], {radius:8, color:'#fff', weight:2, fillColor:COL[Engine.band(r.total)], fillOpacity:1}).addTo(map)
+    .bindPopup(`<b>${esc(s.name)}</b><br>${r.none ? '' : roughFt(r.h)+' waves · '+Math.round(r.period)+'s swell<br>'}About ${s.min} min drive`));
+  const drawPills = () => {   // wave labels: top 6 always, the rest only when zoomed in, never more than 40 on screen
+    if (m1 !== map) return; pills.clearLayers();
+    const z = map.getZoom(), bb = map.getBounds().pad(0.05); let n = 0;
+    onMap.forEach(({s,r},i) => { if (n >= 40 || !(i < 6 || z >= 11) || !bb.contains([s.lat, s.lon])) return; n++;
+      const b = Engine.band(r.total);
+      L.marker([s.lat, s.lon], {interactive:false, zIndexOffset:1000-i, icon:L.divIcon({className:'', iconSize:[96,24], iconAnchor:[48,12],
+        html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'✕'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`})}).addTo(pills); });
+  };
+  map.on('moveend zoomend', drawPills);
   const m0 = map;
   mapFit = () => { if (onMap.length) m0.fitBounds(L.latLngBounds([[center.lat, center.lon], ...onMap.map(x => [x.s.lat, x.s.lon])]).pad(0.15)); else m0.setView([center.lat, center.lon], 11); };
-  mapFit(); setTimeout(() => { if (m0 === map && !fsOn){ m0.invalidateSize(); mapFit(); } }, 150);   // size the map once the card has laid out
+  mapFit(); drawPills(); setTimeout(() => { if (m0 === map && !fsOn){ m0.invalidateSize(); mapFit(); } }, 150);   // size the map once the card has laid out
   box.querySelectorAll('.spot[data-i]').forEach(el => el.addEventListener('click', () => {
     const m = markers[+el.dataset.i]; map.setView(m.getLatLng(), 14); m.openPopup(); $('map').scrollIntoView({block:'center'});
   }));
@@ -975,13 +983,23 @@ function drawSpots(){
 /* ========= All beaches: dropdown, background fill-in, live lookup, full-screen map ========= */
 let searching = '', enrichRun = 0, pendingRedraw = false, mapFit = null, fsOn = false, fsHome = null, fsBtn = null;
 const triedQ = new Set();
+const KNOWN = [{name:'Gwithian Beach', lat:50.2285, lon:-5.392, key:'gwithian'}];   // popular beaches the free map data sometimes leaves out
+const MAXB = 100;
+function addKnown(list){
+  list.rest = list.rest || [];
+  KNOWN.forEach(k => {
+    if (hav(center.lat, center.lon, k.lat, k.lon) > reachKm()*1.1) return;
+    if ([...list, ...list.rest].some(x => (x.name || '').toLowerCase().includes(k.key))) return;
+    list.rest.unshift({name:k.name, lat:k.lat, lon:k.lon, km:hav(center.lat, center.lon, k.lat, k.lon), known:true});
+  });
+}
 const ICON_FS = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
 const ICON_X = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg>';
 
 function fillBeachSelect(){   // every beach within your travel distance, A to Z
   const sel = $('bsel'); if (!sel) return;
   const seen = new Map();
-  if (spotsData) [...spotsData, ...(spotsData.rest || [])].filter(inReach).forEach(x => { if (x.name && !seen.has(x.name.toLowerCase())) seen.set(x.name.toLowerCase(), x.name); });
+  if (spotsData) [...spotsData, ...(spotsData.rest || [])].filter(inReach).sort((a,b) => a.km - b.km).slice(0, MAXB).forEach(x => { if (x.name && !seen.has(x.name.toLowerCase())) seen.set(x.name.toLowerCase(), x.name); });
   const names = [...seen.values()].sort((a,b) => a.localeCompare(b));
   if (!names.length){ sel.hidden = true; return; }
   const cur = ($('sq').value || '').trim().toLowerCase();
@@ -1000,8 +1018,11 @@ async function enrichMerge(list, items){   // work out angle and drive time for 
 
 async function enrichRest(){   // quietly check the rest of the beaches so every one ends up on the map
   const list = spotsData, sid = spotRun, rid = runId, eid = ++enrichRun;
-  if (!list || !list.rest || !list.rest.length) return;
-  const todo = list.rest.filter(inReach).slice(0, 150), live = () => eid === enrichRun && sid === spotRun && rid === runId && spotsData === list;
+  if (!list || !center) return;
+  addKnown(list);
+  if (!list.rest.length) return;
+  const room = Math.max(0, MAXB - list.filter(inReach).length), cand = list.rest.filter(inReach);
+  const todo = [...cand.filter(x => x.known), ...cand.filter(x => !x.known).slice(0, room)], live = () => eid === enrichRun && sid === spotRun && rid === runId && spotsData === list;
   let changed = false;
   for (let i = 0; i < todo.length; i += 24){
     if (!live()) return;
@@ -1020,11 +1041,12 @@ async function lookupBeach(q){   // a beach the first search missed: ask the map
     getT(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${center.lat}&lon=${center.lon}&limit=10&lang=en&osm_tag=natural:beach`, 9000)
       .then(g => g.features.filter(f => f.properties && f.properties.name).map(f => ({name:f.properties.name, lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0]}))),
     getT(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=jsonv2&limit=10&viewbox=${center.lon-dx},${center.lat+dy},${center.lon+dx},${center.lat-dy}`, 9000)
-      .then(a => a.filter(p => p.type === 'beach' && p.name).map(p => ({name:p.name, lat:+p.lat, lon:+p.lon}))),
+      .then(a => a.filter(p => p.name && ['beach','bay','sand','village','hamlet','locality','suburb','beach_resort','cape','headland'].includes(p.type)).map(p => ({name:p.name, lat:+p.lat, lon:+p.lon}))),
     getT('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(`[out:json][timeout:9];nwr["natural"="beach"]["name"~"${rx}",i](around:${lim*1000},${center.lat},${center.lon});out center tags;`), 10000)
       .then(j => j.elements.filter(e => e.tags && e.tags.name).map(e => { const c = e.center || e; return {name:e.tags.name, lat:c.lat, lon:c.lon}; }))
   ];
   const got = (await Promise.allSettled(jobs)).filter(r => r.status === 'fulfilled').flatMap(r => r.value);
+  KNOWN.forEach(k => { if (k.key.includes(q.toLowerCase()) || q.toLowerCase().includes(k.key)) got.push({name:k.name, lat:k.lat, lon:k.lon}); });
   if (list !== spotsData) return;
   const have = [...list, ...(list.rest || [])], fresh = [];
   got.forEach(b => {
@@ -1064,7 +1086,7 @@ function setFs(on, quiet){   // full-screen map: the map box moves to the page b
     el.classList.remove('fs'); document.body.classList.remove('fs-lock'); map.scrollWheelZoom.disable();
   }
   if (fsBtn){ fsBtn.innerHTML = on ? ICON_X : ICON_FS; fsBtn.setAttribute('aria-label', on ? 'Close full screen map' : 'Full screen map'); }
-  const m = map; setTimeout(() => { if (m === map) m.invalidateSize(); }, 60);
+  const m = map; [60, 350].forEach(t => setTimeout(() => { if (m === map) m.invalidateSize(); }, t));
   if (!on && pendingRedraw && !quiet){ pendingRedraw = false; drawSpots(); }
 }
 function toggleFs(){
