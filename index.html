@@ -81,6 +81,8 @@ select{display:block;width:100%;font:inherit;min-height:48px;border-radius:12px;
 button.link{min-height:0;border:0;background:none;color:var(--teal);text-decoration:underline;padding:4px 2px;font-weight:600}
 .cond{margin:12px 0 0;font-size:.85rem;color:var(--ink)}
 #inst [hidden]{display:none!important}
+#rsel[hidden],#rhint[hidden]{display:none}#rsel{margin:8px 0 12px}#rhint{margin:0 0 12px}
+.rp-back{margin:8px 0 0;min-height:44px;padding:0 14px;font-size:.9rem}
 nav#nav button{font-size:.66rem;padding:0 1px}   /* seven tabs share the bar (nav# makes it win over the base rule further down) */
 .rp-head{display:flex;gap:12px;align-items:stretch;margin:4px 0 14px}.rp-bar{display:block;width:6px;border-radius:3px;flex:none}
 .rp h2{margin:0;font-size:1.3rem;line-height:1.2}.rp .sub{margin:2px 0 0;color:var(--mute);font-size:.9rem;font-weight:600}
@@ -137,7 +139,7 @@ abbr[data-def]{cursor:pointer}
 #nav button[aria-current=page]{color:var(--teal);box-shadow:inset 0 3px 0 var(--teal)}
 #out:empty::before,#week:empty::before{content:'Search for a beach or town above, or tap Use my location.';display:block;color:var(--mute);padding:12px 0}
 .empty{color:var(--mute)}#spots:not([hidden]) + .empty{display:none}
-#sq{width:100%;box-sizing:border-box;min-height:48px;padding:0 14px;font-size:1rem;border:2px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);margin:0 0 12px}
+#sq,#rq{width:100%;box-sizing:border-box;min-height:48px;padding:0 14px;font-size:1rem;border:2px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);margin:0 0 12px}
 .daychips .m{display:block;font-size:.8rem;font-weight:700}.daychips .m.g{color:var(--good)}.daychips .m.o{color:var(--ok)}.daychips .m.r{color:var(--bad)}
 .daychips button[aria-pressed=true] .m{color:inherit}
 details.more summary{cursor:pointer;color:var(--mute);padding:8px 0;font-size:.85rem}
@@ -275,13 +277,13 @@ body.fs-lock{overflow:hidden}
 </div>
 
 <div class="tab" id="t-today"><div id="out" aria-live="polite"></div><p class="note">Forecasts are estimates. Always check with local lifeguards and signage.</p></div>
-<div class="tab" id="t-report" hidden><div id="report"></div></div>
+<div class="tab" id="t-report" hidden><div id="rbar"><input id="rq" type="search" placeholder="Search a beach for its report, e.g. Fistral" aria-label="Search beaches nearby for a report" autocomplete="off"><select id="rsel" aria-label="Pick any beach nearby for a report" hidden></select><p class="legend" id="rhint" role="status" hidden></p></div><div id="report"></div></div>
 <div class="tab" id="t-week" hidden><div id="week"></div></div>
 <div class="tab" id="t-beaches" hidden><input id="sq" type="search" placeholder="Search beaches nearby, e.g. Fistral" aria-label="Search beaches nearby" autocomplete="off"><select id="bsel" aria-label="Pick any beach nearby" hidden></select><section class="card" id="spots" hidden></section><p class="empty">Search for a beach or town above to see nearby beaches.</p></div>
 <div class="tab" id="t-skills" hidden>
   <div class="whens" id="skseg" role="group" aria-label="Skills sections" style="grid-template-columns:repeat(2,1fr);margin-bottom:6px"><button type="button" aria-pressed="true" data-k="main">My level and progress</button><button type="button" aria-pressed="false" data-k="learn">Learn</button></div>
   <div id="sk-main">
-  <section class="card"><h3>Your level</h3><p>Your level decides what counts as good for you. Change it with the 1 to 5 buttons on Today, Week or Beaches.</p><button type="button" id="qbtn">Not sure of your level? Take the 1-minute quiz</button><div id="quiz" aria-live="polite"></div></section>
+  <section class="card"><h3>Your level</h3><p>Your level decides what counts as good for you. Change it with the 1 to 5 buttons on Today, Week or Beaches.</p><button type="button" id="qbtn">Not sure of your level? Take the 1-minute quiz</button><div id="qlast"></div><div id="quiz" aria-live="polite"></div></section>
   <section class="card"><h3>Progress checklists</h3><p id="pmsg" class="legend" role="status"></p><div id="prog"></div></section>
   </div>
   <div id="sk-learn" hidden>
@@ -322,10 +324,11 @@ body.fs-lock{overflow:hidden}
 </div>
 <div class="tab" id="t-kit" hidden>
   <h2 style="margin:4px 0 12px;font-size:1.25rem">My kit and sessions</h2>
-  <div class="whens" id="kitseg" role="group" aria-label="My kit sections"><button type="button" aria-pressed="true" data-k="gear">Gear</button><button type="button" aria-pressed="false" data-k="log">Session log</button><button type="button" aria-pressed="false" data-k="share">Share</button></div>
+  <div class="whens" id="kitseg" role="group" aria-label="My kit sections"><button type="button" aria-pressed="true" data-k="gear">Gear</button><button type="button" aria-pressed="false" data-k="log">Session log</button><button type="button" aria-pressed="false" data-k="share">Share</button><button type="button" aria-pressed="false" data-k="buddy">Buddy</button></div>
   <section class="card feat" id="k-gear"><h3>Board finder and gear</h3><div id="f-gear"></div></section>
   <section class="card feat" id="k-log" hidden><h3>Session log</h3><div id="f-log"></div></section>
   <section class="card feat" id="k-share" hidden><h3>Share a “Should I go?” link</h3><div id="f-share"></div></section>
+  <section class="card feat" id="k-buddy" hidden><h3>Buddy check-in</h3><div id="f-buddy"></div></section>
 </div>
 <div class="tab" id="t-more" hidden>
   <section class="card"><h3>Units</h3><div id="units"></div></section>
@@ -365,6 +368,7 @@ const CONFIG = {
   hazard: {ripH:1.0, ripPeriod:9, longPeriod:12, onshoreMph:15, coldC:12, daylightHours:2},   // heads-up thresholds
   trust: ['high','high','medium','medium','low','low','low'],   // forecast confidence by days ahead
   drivePenaltyPerMin: 0.25,    // spot ranking: each drive minute costs this many score points
+  windBandsMph: [8, 15],       // session log insights: under 8 mph is light, 8 to 15 moderate, over 15 strong
   progress: {levelUpAt: 2},    // self-assessment every skill needs before a level-up: 0 not yet, 1 sometimes, 2 consistent
   exposure: {fullWithin: 45, shelteredFrom: 110, minShare: 0.15},  // swell angle vs beach facing
   spots: {probeKm: 1.2, max: 100},   // beaches checked and shown straight away
@@ -463,6 +467,7 @@ const Engine = {
   wetsuit(c){
     return c>=22?'boardshorts or a rash guard':c>=17?'a 3/2 wetsuit':c>=12?'a 4/3 wetsuit with boots':'a 5/4 wetsuit with boots, gloves and a hood';
   },
+  windBand(mph){ const [a, b] = CONFIG.windBandsMph; return mph < a ? 'light' : mph <= b ? 'moderate' : 'strong'; },
   levelDone(marks, ids){ return ids.every(id => (marks[id] || 0) >= CONFIG.progress.levelUpAt); },   // marks: {skillId: 0|1|2}
   streak(days, today){   // days: day numbers with practice. Counts Monday-to-Sunday weeks in a row; stays alive while this week is still empty.
     const wk = d => Math.floor((d + 3) / 7), s = new Set(days.map(wk));
@@ -498,6 +503,7 @@ const Engine = {
     a(this.hazards(hx,1,{sst:9}).some(m=>/Cold/.test(m)),'cold water heads-up');
     a(this.hazards({...hx,windFrom:90,windMph:20},1).some(m=>/onshore/.test(m)),'onshore heads-up');
     a(this.hazards(hx,1,{hoursLeft:1}).some(m=>/daylight/.test(m)),'daylight heads-up');
+    a(this.windBand(5)==='light' && this.windBand(8)==='moderate' && this.windBand(15)==='moderate' && this.windBand(16)==='strong','wind bands');
     a(this.levelDone({a:2,b:2},['a','b']) && !this.levelDone({a:2,b:1},['a','b']) && !this.levelDone({a:2},['a','b']),'level-up needs every skill consistent');
     a(this.streak([100,93,86],100)===3 && this.streak([93,86],100)===2 && this.streak([100,79],100)===1 && this.streak([],100)===0,'weekly streak');
     console.log('Engine self-test done');
@@ -537,7 +543,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.38 · 22 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.46 · 22 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -589,18 +595,66 @@ function bodyRange(h){   // "Shin to knee", "Waist-high"
   const a = w(h * 0.8), b = w(h * 1.2), cap = x => x[0].toUpperCase() + x.slice(1);
   return a === b ? cap(a) + (/overhead/.test(a) ? '' : '-high') : cap(a) + ' to ' + b;
 }
+let reportSpot = null;   // a beach picked on the Report tab (null = the forecast point)
+function reportNames(q){   // beach names within reach, A to Z, narrowed by what was typed
+  const seen = new Map();
+  (spotsData ? [...spotsData, ...(spotsData.rest || [])] : []).filter(inReach).sort((a, b) => a.km - b.km).slice(0, MAXB).forEach(x => {
+    const k = (x.name || '').toLowerCase(); if (x.name && !seen.has(k) && (!q || k.includes(q))) seen.set(k, x.name); });
+  return [...seen.values()].sort((a, b) => a.localeCompare(b));
+}
+function fillReportSelect(q = ''){
+  const sel = $('rsel'); if (!sel) return;
+  const names = reportNames(q); if (!names.length){ sel.hidden = true; return; }
+  const cur = reportSpot ? (reportSpot.name || '').toLowerCase() : '';
+  sel.innerHTML = `<option value="">${q ? names.length + (names.length === 1 ? ' match' : ' matches') : 'All beaches nearby (' + names.length + ')'}: pick one</option>`
+    + names.map(n => `<option value="${esc(n)}"${n.toLowerCase() === cur ? ' selected' : ''}>${esc(n)}</option>`).join('');
+  sel.hidden = false;
+}
+function reportHint(t){ const h = $('rhint'); if (!h) return; h.textContent = t || ''; h.hidden = !t; }
+async function reportPick(name){   // show the report for one beach; a beach not checked yet is worked out first
+  const list = spotsData; if (!list) return;
+  if (!name){ reportSpot = null; drawReport(); return; }
+  const k = name.toLowerCase();
+  let sp = list.find(x => (x.name || '').toLowerCase() === k);
+  if (!sp){
+    const r = (list.rest || []).find(x => (x.name || '').toLowerCase() === k);
+    if (r){ try { await enrichMerge(list, [r]); } catch(e){} if (list.includes(r)) sp = r; }
+  }
+  if (list !== spotsData) return;   // a new search started meanwhile
+  reportSpot = sp || null;
+  reportHint(sp ? '' : 'That beach could not be placed on the coast, so the forecast point is shown.');
+  drawReport();
+}
+async function reportSearch(){   // typed in the box: narrow the list, look further afield if nothing matches
+  const q = ($('rq').value || '').trim().toLowerCase(), list = spotsData;
+  if (!q){ fillReportSelect(); reportHint(''); return; }
+  if (!list){ reportHint('Nearby beaches are still loading. Try again in a moment.'); return; }
+  let names = reportNames(q);
+  if (!names.length && q.length >= 3 && !triedQ.has(q)){
+    triedQ.add(q); reportHint('Looking for “' + q + '” on the map…');
+    try { await lookupBeach(q); } catch(e){}
+    if (list !== spotsData) return;
+    names = reportNames(q);
+  }
+  fillReportSelect(q);
+  if (($('rq').value || '').trim().toLowerCase() !== q) return;   // typed more meanwhile
+  if (names.length === 1){ reportHint(''); reportPick(names[0]); }
+  else reportHint(names.length ? names.length + ' beaches match. Pick one in the list.' : 'No beach called “' + q + '” in the area we searched. Try another spelling or a nearby town.');
+}
 function reportHTML(){
   const none = t => `<section class="card"><h3>Surf report</h3><p class="legend">${t}</p></section>`;
   if (!data) return none('No forecast loaded yet. Search for a place above, or use your location.');
   const day = data.days[0], cur = day.rows.find(r => !r.past) || day.rows[day.rows.length - 1];
   if (!cur || cur.h == null) return none('There is no wave data for this point right now.');
-  const sc = Engine.score({...cur, daylight:true}, level), t = sc ? sc.total : 0;
+  const sp = reportSpot && spotsData && spotsData.includes(reportSpot) ? reportSpot : null, f = sp ? sp.facing : null;
+  const row = sp ? {...cur, h: cur.h * (f == null ? 1 : Engine.exposure(cur.waveFrom, f)), waveFrom: f ?? cur.waveFrom} : cur;   // as scoreSpot does
+  const sc = Engine.score({...row, daylight:true}, level), t = sc ? sc.total : 0;
   const step = RATING.reduce((a, [, min], i) => t >= min ? i : a, 0), col = {g:'var(--good)', o:'var(--ok)', r:'var(--bad)'}[Engine.band(t)];
-  const sr = surfRange(cur.h), [wn, wu] = fmtW(cur.windMph).split(' ');
-  const wt = Engine.windType(cur.windFrom, cur.waveFrom ?? cur.windFrom + 180), wtx = {offshore:'Offshore', onshore:'Onshore', cross:'Cross-shore'}[wt];
+  const sr = surfRange(row.h), [wn, wu] = fmtW(cur.windMph).split(' ');
+  const wt = Engine.windType(cur.windFrom, row.waveFrom ?? cur.windFrom + 180), wtx = {offshore:'Offshore', onshore:'Onshore', cross:'Cross-shore'}[wt];
   const gust = cur.gust != null && cur.gust > cur.windMph + 1 ? fmtW(cur.gust).replace(' ', '') + ' gusts, ' : '';
   return `<div class="rp">
-  <div class="rp-head"><i class="rp-bar" style="background:${col}"></i><div><h2>${esc(place || 'Your spot')} surf report</h2><p class="sub">Report &amp; forecast</p></div></div>
+  <div class="rp-head"><i class="rp-bar" style="background:${col}"></i><div><h2>${esc(sp ? sp.name : place || 'Your spot')} surf report</h2><p class="sub">${sp ? 'Beach report' + (sp.min >= 0 ? ' · ' + (sp.est ? 'about ' : '') + sp.min + ' min drive' : '') : 'Report &amp; forecast'}</p>${sp ? '<button type="button" class="rp-back" id="rback">Back to ' + esc(place || 'the forecast point') + '</button>' : ''}</div></div>
   <h3 class="rp-h">Current surf conditions</h3>
   <p class="sub">Local time: ${clock(data.off)}</p>
   <div class="rp-grid">
@@ -608,17 +662,18 @@ function reportHTML(){
       <div class="rp-rate"><b style="color:${col}">${RATING[step][0]}</b><span class="rp-segs" aria-hidden="true">${RATING.map((_, i) => `<i class="${i <= step ? 'on' : ''}" style="--c:${col}"></i>`).join('')}</span></div>
       <div class="rp-src">Shorebreak score for level ${level}${cur.daylight ? '' : '. It is dark now, so this is how the waves look, not a time to surf'}</div></section>
     <section class="rp-card"><div class="rp-k">Surf</div>
-      <div><div class="rp-big">${sr.n}<small>${sr.u}</small></div><div class="rp-sub">${bodyRange(cur.h)}</div></div>
+      <div><div class="rp-big">${sr.n}<small>${sr.u}</small></div><div class="rp-sub">${bodyRange(row.h)}</div></div>
       <div class="rp-src">Wave model</div></section>
     <section class="rp-card"><div class="rp-k">Wind</div>
       <div><div class="rp-big">${wn}<small>${wu}</small> <span class="rp-dir">${cur.windFrom != null ? compass16(cur.windFrom) : ''}</span></div><div class="rp-sub">${gust}${wtx}</div></div>
       <div class="rp-src">Weather model</div></section>
   </div>
-  <p class="legend">These are the conditions at the forecast point for ${esc(place || 'this place')}, not a particular beach. Offshore and onshore are judged against the swell direction here.</p></div>`;
+  <p class="legend">${sp ? `Estimated for ${esc(sp.name)} from the forecast point near ${esc(place || 'here')}, using the beach's angle to the swell${f == null ? ' (angle unclear, so the full swell is assumed)' : ''}. Local knowledge matters.` : `These are the conditions at the forecast point for ${esc(place || 'this place')}, not a particular beach. Pick a beach above for an estimate for it. Offshore and onshore are judged against the swell direction here.`}</p></div>`;
 }
 function drawReport(){
   const el = $('report'); if (!el) return;
   try { el.innerHTML = reportHTML(); } catch(e){ el.innerHTML = '<section class="card"><p class="legend">The report could not be drawn. Try searching again.</p></section>'; }
+  const rb = $('rback'); if (rb) rb.onclick = () => { reportSpot = null; $('rq').value = ''; reportHint(''); fillReportSelect(); drawReport(); };
 }
 
 /* One hourly line chart as inline SVG (no library). rows: a day's hourly rows. fmt shows a value in the person's units.
@@ -701,7 +756,7 @@ function fillWeek(pool){
     if (!pool.length){ el.innerHTML = ''; return; }
     const {better, avoid} = coastInfo(pool.map(s => ({s, r:scoreSpot(s, level, d.rows)})));
     const go = better && better.ok.slice(0,2).map(x => `${esc(x.s.name)} (${roughFt(x.r.h)}, ${x.s.min} min drive)`).join(', ');
-    el.innerHTML = better ? `<p><b>Better:</b> the ${better.name}. Try ${go}.</p>` + (avoid.length ? `<p><b>Avoid:</b> the ${avoid.map(i => i.name).join(' and the ')}.</p>` : '')
+    el.innerHTML = better ? `<p><b>Better:</b> the ${better.label}. Try ${go}.</p>` + (avoid.length ? `<p><b>Avoid:</b> the ${avoid.map(i => i.label).join(' and the ')}.</p>` : '')
       : `<p>Nothing nearby looks ideal for level ${level} that day. Try another day, a bigger distance, or a lesson with a surf school.</p>`;
   });
 }
@@ -918,7 +973,7 @@ function showSaved(c){   // show the saved forecast for a place, with a banner s
 
 async function run(lat, lon, name){
   const id = ++runId; spotRun++; showN = 5;
-  triedQ.clear(); enrichRun++; place = name; center = {lat, lon}; data = null; dayK = null; weekK = null; $('sq').value = ''; spotsData = null; spotsMsg = ''; fcFrom = null; savedAt = null;
+  triedQ.clear(); enrichRun++; place = name; center = {lat, lon}; data = null; dayK = null; weekK = null; $('sq').value = ''; spotsData = null; spotsMsg = ''; fcFrom = null; savedAt = null; reportSpot = null; $('rq').value = ''; reportHint(''); fillReportSelect();
   $('out').innerHTML = '<div class="skel" aria-label="Loading"></div>'; if ($('report')) $('report').innerHTML = '<div class="skel" aria-label="Loading"></div>';
   $('spots').hidden = false; drawSpots();
   const fcP = loadForecast(lat, lon).then(d => ({d}), e => ({e}));
@@ -1134,6 +1189,23 @@ async function reloadSpots(){
 /* ===== Which coast is better? Group the nearby beaches by the direction their coast faces ===== */
 const COMPASS = ['north','north-east','east','south-east','south','south-west','west','north-west'];
 const coastOf = s => COMPASS[Math.round((s.facing != null ? s.facing : bearing(center.lat, center.lon, s.lat, s.lon)) / 45) % 8] + ' coast';
+/* Area names: the town near a coast's best beach (Photon reverse lookup, asked once per ~1 km and remembered on this device) */
+const AREA = (() => { try { return JSON.parse(localStorage.getItem('sb-spotsarea') || '{}'); } catch(e){ return {}; } })(), askedArea = new Set();
+const areaKey = s => s.lat.toFixed(2) + ',' + s.lon.toFixed(2);
+const areaTxt = s => AREA[areaKey(s)] ? ` (near ${esc(AREA[areaKey(s)])})` : '';
+async function loadAreas(list){
+  const todo = list.filter(s => !(areaKey(s) in AREA) && !askedArea.has(areaKey(s))).slice(0, 8); if (!todo.length) return;
+  todo.forEach(s => askedArea.add(areaKey(s)));
+  let got = 0;
+  await Promise.all(todo.map(async s => { try {
+    const g = await getT(`https://photon.komoot.io/reverse?lat=${s.lat}&lon=${s.lon}&lang=en&limit=1`, 6000), p = (g.features[0] || {}).properties || {};
+    AREA[areaKey(s)] = p.city || p.locality || p.district || p.county || ''; got++;
+  } catch(e){} }));   // a failed lookup stays unasked on disk, so a later visit tries again
+  if (!got) return;
+  try { localStorage.setItem('sb-spotsarea', JSON.stringify(AREA)); } catch(e){}
+  if (fsOn){ pendingRedraw = true; return; }
+  holdView = true; keepPlace('spots', drawSpots);   // redraw so the names appear
+}
 const windTxt = {offshore:'clean offshore wind', onshore:'choppy onshore wind', cross:'sideways wind'};
 function coastInfo(all){   // which coast is better, which to avoid
   const g = {};
@@ -1143,11 +1215,12 @@ function coastInfo(all){   // which coast is better, which to avoid
     const hs = a.filter(x => !x.r.none).map(x => x.r.h), w = {};
     a.forEach(x => { if (x.r.type) w[x.r.type] = (w[x.r.type] || 0) + 1; });
     const top = a.slice(0,3);
-    return {name, ok:a.filter(x => x.r.total >= CONFIG.okAt), h:hs.length ? hs.reduce((p,q) => p+q, 0)/hs.length : null,
+    return {name, label:name + areaTxt(a[0].s), best:a[0].s, ok:a.filter(x => x.r.total >= CONFIG.okAt), h:hs.length ? hs.reduce((p,q) => p+q, 0)/hs.length : null,
       wind:Object.entries(w).sort((p,q) => q[1]-p[1])[0], score:top.reduce((p,x) => p + x.r.total, 0)/top.length};
   });
   const better = info.filter(i => i.ok.length).sort((p,q) => q.score - p.score)[0];
   const avoid = info.filter(i => i !== better && !i.ok.length);
+  loadAreas(info.map(i => i.best));
   return {better, avoid};
 }
 function adviseCoasts(all){
@@ -1155,8 +1228,8 @@ function adviseCoasts(all){
   if (!all.length){ box.innerHTML = ''; t.textContent = '○ Not ideal here'; return; }
   const {better, avoid} = coastInfo(all);
   const go = better && better.ok.slice(0,3).map(x => `${esc(x.s.name)} (${roughFt(x.r.h)} · ${Math.round(x.r.period)}s · ${x.s.min} min drive)`).join(', ');
-  box.innerHTML = (better ? `<p class="adv"><b>Better:</b> the ${better.name}. Try ${go}.</p>` : '<p class="adv">Nowhere within your travel distance suits your level '+data.label+'. Try another day, a bigger distance or a different time of day.</p>')
-    + (avoid.length ? `<p class="adv"><b>Avoid:</b> ${avoid.map(i => `the ${i.name}${i.h != null ? ' ('+roughFt(i.h)+(i.wind ? ', '+windTxt[i.wind[0]] : '')+')' : ''}`).join('; ')}.</p>` : '');
+  box.innerHTML = (better ? `<p class="adv"><b>Better:</b> the ${better.label}. Try ${go}.</p>` : '<p class="adv">Nowhere within your travel distance suits your level '+data.label+'. Try another day, a bigger distance or a different time of day.</p>')
+    + (avoid.length ? `<p class="adv"><b>Avoid:</b> ${avoid.map(i => `the ${i.label}${i.h != null ? ' ('+roughFt(i.h)+(i.wind ? ', '+windTxt[i.wind[0]] : '')+')' : ''}`).join('; ')}.</p>` : '');
   t.textContent = better ? '→ Better on the ' + better.name : '○ No good coast nearby ' + data.label;
 }
 
@@ -1167,7 +1240,7 @@ function drawSpots(){
   holdView = false; userMoved = false;
   if (map){ map.remove(); map = null; }
   const head = ctlHTML() + reachHTML();   // travel distance is always on show
-  fillBeachSelect();
+  fillBeachSelect(); fillReportSelect(($('rq').value || '').trim().toLowerCase());
   if (!spotsData || !data){
     box.innerHTML = head + (spotsMsg || '<h3>Finding beaches nearby…</h3><p class="legend">Asking the free map servers. This can take up to 30 seconds.</p><div class="skel"></div>');
     if (spotsMsg && $('advice')) $('advice').innerHTML = '';
@@ -1387,6 +1460,8 @@ const QUIZ = [
  {id:'board',q:'Which board do you own?',o:[['None, I rent',0],['Foam board',1],['Funboard or longboard',2],['Fish or shortboard',3]]}
 ];
 let qi = 0, ans = [];
+const quizSaved = () => { try { const o = JSON.parse(localStorage.getItem('sb-quiz') || 'null'); return o && Array.isArray(o.a) && o.a.length === QUIZ.length && o.a.every((v,k) => QUIZ[k].o[v]) ? o.a : null; } catch(e){ return null; } };   // last answers, if they still fit the questions
+const quizBtn = () => { $('qbtn').textContent = quizSaved() ? 'Retake the quiz (your answers are saved)' : 'Not sure of your level? Take the 1-minute quiz'; };
 const qpts = id => { const k = QUIZ.findIndex(x=>x.id===id); return QUIZ[k].o[ans[k]][1]; };
 
 function quizStep(){
@@ -1403,7 +1478,8 @@ function quizStep(){
   $('quiz').querySelector('input').focus();
 }
 
-function quizResult(){
+const quizCalc = a => {   // answers -> level and the reasons behind it
+  const qpts = id => { const k = QUIZ.findIndex(x=>x.id===id); return QUIZ[k].o[a[k]][1]; };
   const skill = ['times','pop','chest','etiq'].reduce((a,id)=>a+qpts(id), 0);
   let L = skill>=11?5 : skill>=9?4 : skill>=6?3 : skill>=3?2 : 1;
   const why = [`Your experience, pop-up, wave comfort and etiquette answers add up to ${skill} out of 12, which points to level ${L}.`];
@@ -1417,18 +1493,31 @@ function quizResult(){
   if (qpts('age') === 0 || qpts('age') === 3) why.push('Warm up well and rest between waves; start with shorter sessions.');
   if (qpts('board') === 3 && L <= 2) why.push('A fish or shortboard is hard to learn on. Rent or borrow a bigger, softer board for now.');
   why.push('When unsure, we pick the lower level. Move up with the checklists, or drop a level any time conditions feel too big.');
+  return {L, why};
+};
+function quizResult(){
+  try { localStorage.setItem('sb-quiz', JSON.stringify({a:ans, d:new Date().toISOString().slice(0,10)})); } catch(e){} quizBtn();   // keep the answers so a retake starts from them
+  const {L, why} = quizCalc(ans);
   $('quiz').innerHTML = `<section class="card res"><h3>Your starting level: ${L}, ${CONFIG.levels[L-1].name}</h3>
     <ul>${why.map(w=>`<li>${w}</li>`).join('')}</ul>
     <div class="row"><button class="go" id="quse">Use level ${L}</button><button id="qretake">Retake quiz</button></div></section>`;
   $('quse').addEventListener('click', ()=>{
     level = L;
     try { localStorage.setItem('sb-level', level); } catch(e){}
-    drawLevels(); if (data) render(); $('quiz').innerHTML = ''; go('today');
+    drawLevels(); if (data) render(); $('quiz').innerHTML = ''; drawQuizLast(); go('today');
   });
   $('qretake').addEventListener('click', startQuiz);
 }
-function startQuiz(){ qi = 0; ans = []; quizStep(); }
-$('qbtn').addEventListener('click', startQuiz);
+function drawQuizLast(){   // the saved quiz result, with its reasons, without retaking
+  const a = quizSaved(), box = $('qlast'); if (!a){ box.innerHTML = ''; return; }
+  let d = ''; try { d = JSON.parse(localStorage.getItem('sb-quiz')).d || ''; } catch(e){}
+  const {L, why} = quizCalc(a);
+  box.innerHTML = `<details class="feat"><summary>Last quiz result: level ${L}, ${CONFIG.levels[L-1].name}</summary><div><p class="legend">${d ? 'Taken ' + d + '. ' : ''}Your answers are saved, so a retake starts from them.</p><ul>${why.map(w => `<li>${w}</li>`).join('')}</ul></div></details>`;
+}
+function startQuiz(){ qi = 0; ans = quizSaved() || []; $('qlast').innerHTML = ''; quizStep(); }
+$('qbtn').addEventListener('click', startQuiz); quizBtn(); drawQuizLast();
+let rqT; $('rq').addEventListener('input', () => { clearTimeout(rqT); rqT = setTimeout(reportSearch, 350); });   // Report tab: search for a beach
+$('rsel').addEventListener('change', e => { $('rq').value = e.target.value; clearTimeout(rqT); reportPick(e.target.value); });
 let sqT; $('sq').addEventListener('input', () => { clearTimeout(sqT); sqT = setTimeout(searchBeaches, 350); });   // search beaches by name
 $('bsel').addEventListener('change', e => { $('sq').value = e.target.value; clearTimeout(sqT); searchBeaches(); });   // pick a beach from the dropdown
 
@@ -1578,11 +1667,14 @@ async function shareIt(text){
 }
 // Safety
 const SAFETY = [['Rip currents','Look for a calm-looking channel of choppy, murky or foamy water heading out to sea. If one grabs you, stay calm and don’t swim against it. Float, or swim across it (parallel to the beach) until it eases, then head in. Wave an arm and shout if you need help.'],['Read the lineup first','Watch for ten minutes before you go in. Note where the waves break, where people sit, and where the whitewater and channels are.'],['Never surf alone','Go with someone, or where a lifeguard is on duty, and stay between the red and yellow flags.'],['Sun and cold','Use reef-safe sunscreen. In cold water wear the right wetsuit. Shivering, numb hands or confusion mean get out and warm up.'],['When to skip','Waves bigger than your level, strong onshore wind, fading light, or you feel tired or unsure. When in doubt, don’t go out.']];
-$('f-safety').innerHTML = SAFETY.map(([t,p]) => H(t,p)).join('') + '<h4>Before you go in</h4>' + ['I checked the forecast and the flags','I know where I’ll get out','My leash and board are checked','I have water and sun protection','Someone knows my plan'].map(t => `<label class="tick"><input type="checkbox"> ${t}</label>`).join('') + '<p><button type="button" id="plan">Tell someone your plan</button></p><p class="legend">Forecasts are estimates. Always check with local lifeguards and signage.</p>';
+const todayStr = () => new Date().toLocaleDateString('en-CA');   // local date, YYYY-MM-DD
+const safeTicks = () => { const o = load('sb-safe'); return !Array.isArray(o) && o.d === todayStr() ? o.on : []; };   // ticks reset each new day
+$('f-safety').innerHTML = SAFETY.map(([t,p]) => H(t,p)).join('') + '<h4>Before you go in</h4>' + ['I checked the forecast and the flags','I know where I’ll get out','My leash and board are checked','I have water and sun protection','Someone knows my plan'].map((t,i) => `<label class="tick"><input type="checkbox" data-s="${i}"${safeTicks().includes(i) ? ' checked' : ''}> ${t}</label>`).join('') + '<p><button type="button" id="plan">Tell someone your plan</button></p><p class="legend">Forecasts are estimates. Always check with local lifeguards and signage.</p>';
+$('f-safety').addEventListener('change', e => { const c = e.target; if (c.dataset.s == null) return; const on = safeTicks().filter(i => i !== +c.dataset.s); if (c.checked) on.push(+c.dataset.s); store('sb-safe', {d:todayStr(), on}); });
 $('plan').onclick = () => shareIt(`I’m planning to surf near ${place || 'the coast'}. Here’s the forecast, please check in on me:`);
 // Etiquette
 const ETIQ = [['Right of way','The surfer closest to where the wave breaks (the peak) has priority. If you’re further out or on the shoulder, let them have it.'],['Don’t drop in','Never take off on a wave someone else already has. Look both ways before you paddle.'],['Paddle out wide','Go around the lineup through the channel or whitewater, not across the path of surfers riding in.'],['Apologise','If you get it wrong, say sorry and move on. A wave of the hand goes a long way.'],['Share the waves','Take turns, don’t hog the peak, and let others have the good ones.'],['Respect locals','Be friendly, give space, and learn a spot’s unwritten rules before you paddle out.'],['Control your board','Never let go of it. Duck under or bail safely so it doesn’t hit anyone.']];
-const EQ = [['Two surfers want the same wave. Who goes?',['The one closest to where it breaks','The bigger surfer','Whoever paddles hardest'],0],['You’re paddling out and someone is riding toward you. You…',['Stop right where you are','Paddle wide, away from the breaking part','Paddle straight across their path'],1],['You drop in on someone by accident. You…',['Ignore it','Tell them it was their fault','Say sorry and give them space'],2]];
+const EQ = [['Two surfers want the same wave. Who goes?',['The one closest to where it breaks','The bigger surfer','Whoever paddles hardest'],0],['You’re paddling out and someone is riding toward you. You…',['Stop right where you are','Paddle wide, away from the breaking part','Paddle straight across their path'],1],['You drop in on someone by accident. You…',['Ignore it','Tell them it was their fault','Say sorry and give them space'],2],['You see a surfer who looks tired and struggling. You…',['Keep surfing and hope someone else helps','Wait until they shout','Paddle over, check they’re okay and get help if needed'],2],['You’re a beginner and the lineup is full of experienced surfers. Where should you practise?',['Somewhere quieter, in the whitewater or on the shoulder','Right at the peak','Anywhere, they’ll move for you'],0],['You fall off a wave. As you come up, you should…',['Surface quickly with your arms by your sides','Cover your head with your arms, then check around you','Throw your board away'],1]];
 $('f-etiq').innerHTML = ETIQ.map(([t,p]) => H(t,p)).join('') + '<h4>Quick quiz</h4>' + EQ.map(([q,o],qi) => `<div class="eq"><p><b>${q}</b></p>${o.map((x,i) => `<button type="button" class="spot" data-q="${qi}" data-a="${i}">${x}</button>`).join('')}<small class="fb"></small></div>`).join('');
 $('f-etiq').addEventListener('click', e => { const b = e.target.closest('button[data-q]'); if (!b) return; const q = EQ[+b.dataset.q]; b.closest('.eq').querySelector('.fb').textContent = q[2] === +b.dataset.a ? '✓ Correct.' : '✕ Not quite. Best answer: ' + q[1][q[2]]; });
 // Gear
@@ -1606,26 +1698,67 @@ $('f-gear').addEventListener('input', gearCalc);
 $('f-gear').addEventListener('change', e => { const c = e.target; if (c.dataset.g == null) return; const on = load('sb-gear').filter(i => i !== +c.dataset.g); if (c.checked) on.push(+c.dataset.g); store('sb-gear', on); });
 $('kitseg').addEventListener('click', e => {   // one section at a time: Gear, Session log or Share
   const b = e.target.closest('button'); if (!b) return;
-  ['gear','log','share'].forEach(k => { $('k-' + k).hidden = k !== b.dataset.k; });
+  ['gear','log','share','buddy'].forEach(k => { $('k-' + k).hidden = k !== b.dataset.k; });
   $('kitseg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+});
+// Buddy check-in: tell someone where you are and when you'll be back
+const bud = () => { const b = load('sb-buddy'); return Array.isArray(b) ? {} : b; };
+const buddyBox = () => { const b = bud(); return `<p class="legend" style="margin:0 0 8px">Tell someone where you’re going and when you’ll be back. Set a realistic time, and let them know when you’re out safe.</p>
+<div class="fld"><label>Buddy’s name (optional)<input id="bn" type="text" value="${esc(b.name || '')}"></label><label>Going in at<input id="bi" type="time" value="${esc(b.inT || '')}"></label><label>Back by<input id="bb" type="time" value="${esc(b.backT || '')}"></label></div>
+<p><button type="button" class="go" id="bsend">Send my plan</button> <button type="button" id="bsafe">I’m out safe</button></p>
+<p class="legend" id="bmsg">Your buddy gets a message and a link to today’s forecast. In an emergency call 999 (UK) or 112, and ask for the coastguard.</p>`; };
+$('f-buddy').innerHTML = buddyBox();
+$('f-buddy').addEventListener('input', () => store('sb-buddy', {name:$('bn').value.trim(), inT:$('bi').value, backT:$('bb').value}));
+$('f-buddy').addEventListener('click', e => {
+  const id = e.target.id; if (id !== 'bsend' && id !== 'bsafe') return;
+  const b = {name:$('bn').value.trim(), inT:$('bi').value, backT:$('bb').value}, hi = b.name ? 'Hi ' + b.name + '. ' : '', where = place || 'the coast';
+  if (id === 'bsend' && !b.backT){ $('bmsg').textContent = 'Add a “back by” time first, so your buddy knows when to worry.'; return; }
+  shareIt(id === 'bsend'
+    ? `${hi}I’m surfing near ${where}${b.inT ? ' from about ' + b.inT : ''} and I’ll be out by ${b.backT}. If you haven’t heard from me by then, please call me, and if you can’t reach me, call the coastguard.`
+    : `${hi}I’m out of the water and safe. Thanks for keeping an eye out.`);
 });
 function gearOpen(){ const r = data && data.rows.find(x => x.sst != null); if ($('gt').value === '' && r) $('gt').value = Math.round(r.sst); gearCalc(); }   // water temp comes from the forecast
 // Session log
 let logCond = null;
+async function fillPast(d, ago){   // swell and wind for a past session, from Open-Meteo's free history (about 3 months back); daytime average, 8am to 6pm
+  const lc = $('lc');
+  if (!center){ lc.textContent = 'Search a place first to fill in conditions.'; return; }
+  if (ago > 90){ lc.textContent = 'Conditions can be filled in for the last 3 months. For older sessions, type them in the notes.'; return; }
+  lc.textContent = 'Looking up conditions for ' + d + '…';
+  const q = `latitude=${center.lat}&longitude=${center.lon}&timezone=auto&past_days=${ago}&forecast_days=1`;
+  try {
+    const [m, w] = await Promise.all([get(`https://marine-api.open-meteo.com/v1/marine?${q}&hourly=wave_height,wave_period&cell_selection=sea`), get(`https://api.open-meteo.com/v1/forecast?${q}&hourly=wind_speed_10m,wind_direction_10m&wind_speed_unit=mph`)]);
+    const rows = m.hourly.time.map((t,i) => ({i, j:w.hourly.time.indexOf(t), hr:+t.slice(11,13), day:t.slice(0,10)})).filter(x => x.day === d && x.hr >= 8 && x.hr <= 18 && m.hourly.wave_height[x.i] != null && x.j >= 0 && w.hourly.wind_speed_10m[x.j] != null);
+    if (!rows.length) throw new Error('no data');
+    const avg = a => a.reduce((p,c) => p + c, 0) / a.length, h = avg(rows.map(x => m.hourly.wave_height[x.i])), per = avg(rows.filter(x => m.hourly.wave_period[x.i] != null).map(x => m.hourly.wave_period[x.i])), mph = avg(rows.map(x => w.hourly.wind_speed_10m[x.j]));
+    const dir = (Math.atan2(avg(rows.map(x => Math.sin(w.hourly.wind_direction_10m[x.j] * R_))), avg(rows.map(x => Math.cos(w.hourly.wind_direction_10m[x.j] * R_)))) / R_ + 360) % 360;
+    logCond = {h, wind:mph, txt:`${Engine.bodyHeight(h)} (${fmtH(h)})${isNaN(per) ? '' : ' · ' + Math.round(per) + 's'} · ${fmtW(mph)} ${compass16(dir)} wind`};
+    lc.textContent = `Conditions: ${logCond.txt} (daytime average${place ? ' near ' + place : ''})`;
+  } catch(e){ lc.textContent = 'Couldn’t look up conditions for that day. Check your connection, or try again later.'; }
+}
+$('f-log').addEventListener('change', e => { if (e.target.id === 'ld' && logCond){ logCond = null; $('lc').textContent = 'Date changed. Tap “Fill conditions for this date” again.'; } });   // don't keep another day's conditions
 function drawLog(){
   const L = load('sb-log'), n = L.length, mins = L.reduce((a,x) => a + (x.min || 0), 0), by = {};
   L.filter(x => x.h != null).forEach(x => { (by[Engine.bodyHeight(x.h)] = by[Engine.bodyHeight(x.h)] || []).push(x.rate); });
   const best = Object.entries(by).map(([k,v]) => [k, v.reduce((a,b) => a + b, 0) / v.length]).sort((a,b) => b[1] - a[1])[0];
-  $('f-log').innerHTML = `<div class="fld"><label>Date<input id="ld" type="date" value="${new Date().toISOString().slice(0,10)}"></label><label>Where<input id="lp" type="text" value="${esc(place || '')}"></label><label>Minutes in the water<input id="lm" type="number" inputmode="numeric" value="60"></label><label>What I worked on<input id="lw" type="text" placeholder="e.g. pop-up, paddling"></label><label>Rating<select id="lr">${[5,4,3,2,1].map(i => `<option value="${i}">${i} of 5</option>`).join('')}</select></label><label>Notes<textarea id="ln" rows="2"></textarea></label></div>
-  <p><button type="button" id="lfill">Fill from the forecast</button> <button type="button" class="go" id="lsave" style="width:auto;padding:0 16px">Save session</button></p><p class="legend" id="lc">${logCond ? 'Conditions: ' + logCond.txt : 'Conditions are optional.'}</p>`
-  + (n ? `<h4>Insights</h4><p>${n} session${n > 1 ? 's' : ''}, ${(mins / 60).toFixed(1)} h in the water, average rating ${(L.reduce((a,x) => a + x.rate, 0) / n).toFixed(1)}.${best ? ` You rate sessions highest at ${best[0]} waves.` : ''}</p><h4>Your sessions</h4>` + L.map((x,i) => `<p>${x.d} · ${esc(x.p || '')} · ${'★'.repeat(x.rate)} · ${x.min} min${x.txt ? ' · ' + x.txt : ''}${x.w ? '<br>' + esc(x.w) : ''}${x.n ? '<br><small>' + esc(x.n) + '</small>' : ''} <button type="button" class="link" data-del="${i}">Delete</button></p>`).reverse().join('') : '');
+  const wl = L.filter(x => x.wind != null), byW = {}, [w1, w2] = CONFIG.windBandsMph;   // sessions that have a wind speed saved
+  wl.forEach(x => { (byW[Engine.windBand(x.wind)] = byW[Engine.windBand(x.wind)] || []).push(x.rate); });
+  const bestW = wl.length >= 2 ? Object.entries(byW).map(([k,v]) => [k, v.reduce((a,b) => a + b, 0) / v.length]).sort((a,b) => b[1] - a[1])[0] : null;
+  const WL = {light:`light wind (under ${fmtW(w1)})`, moderate:`moderate wind (${fmtW(w1)} to ${fmtW(w2)})`, strong:`strong wind (over ${fmtW(w2)})`};
+  $('f-log').innerHTML = `<div class="fld"><label>Date<input id="ld" type="date" value="${todayStr()}"></label><label>Where<input id="lp" type="text" value="${esc(place || '')}"></label><label>Minutes in the water<input id="lm" type="number" inputmode="numeric" value="60"></label><label>What I worked on<input id="lw" type="text" placeholder="e.g. pop-up, paddling"></label><label>Rating<select id="lr">${[5,4,3,2,1].map(i => `<option value="${i}">${i} of 5</option>`).join('')}</select></label><label>Notes<textarea id="ln" rows="2"></textarea></label></div>
+  <p><button type="button" id="lfill">Fill conditions for this date</button> <button type="button" class="go" id="lsave" style="width:auto;padding:0 16px">Save session</button></p><p class="legend" id="lc">${logCond ? 'Conditions: ' + logCond.txt : 'Conditions are optional.'}</p>`
+  + (n ? `<h4>Insights</h4><p>${n} session${n > 1 ? 's' : ''}, ${(mins / 60).toFixed(1)} h in the water, average rating ${(L.reduce((a,x) => a + x.rate, 0) / n).toFixed(1)}.${best ? ` You rate sessions highest at ${best[0]} waves.` : ''}${bestW ? ` You rate them highest in ${WL[bestW[0]]}.` : ''}</p><h4>Your sessions</h4>` + L.map((x,i) => `<p>${x.d} · ${esc(x.p || '')} · ${'★'.repeat(x.rate)} · ${x.min} min${x.txt ? ' · ' + x.txt : ''}${x.w ? '<br>' + esc(x.w) : ''}${x.n ? '<br><small>' + esc(x.n) + '</small>' : ''} <button type="button" class="link" data-del="${i}">Delete</button></p>`).reverse().join('') : '');
 }
 $('f-log').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.id === 'lfill'){ const r = data && data.rows.find(x => !x.past && x.h != null);
-    if (r){ logCond = {h:r.h, txt:`${Engine.bodyHeight(r.h)} (${fmtH(r.h)})${r.period != null ? ' · ' + Math.round(r.period) + 's' : ''}`}; $('lc').textContent = 'Conditions: ' + logCond.txt; } else $('lc').textContent = 'Search a place first to fill in conditions.'; }
-  else if (b.id === 'lsave'){ const L = load('sb-log'); L.push({d:$('ld').value, p:$('lp').value, min:+$('lm').value || 0, w:$('lw').value, rate:+$('lr').value, n:$('ln').value, h:logCond ? logCond.h : null, txt:logCond ? logCond.txt : ''}); store('sb-log', L); logCond = null; drawLog(); }
-  else if (b.dataset.del != null){ const L = load('sb-log'); L.splice(+b.dataset.del, 1); store('sb-log', L); drawLog(); }
+  if (b.id === 'lfill'){
+    const n = new Date(), today = n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0') + '-' + String(n.getDate()).padStart(2,'0'), d = $('ld').value;
+    const ago = d ? Math.round((Date.parse(today) - Date.parse(d)) / 864e5) : 0;
+    if (ago >= 1){ fillPast(d, ago); return; }   // a past session: look up what the sea did that day
+    const r = data && data.rows.find(x => !x.past && x.h != null);
+    if (r){ logCond = {h:r.h, wind:r.windMph, txt:`${Engine.bodyHeight(r.h)} (${fmtH(r.h)})${r.period != null ? ' · ' + Math.round(r.period) + 's' : ''}${r.windMph != null ? ' · ' + fmtW(r.windMph) + ' ' + compass16(r.windFrom) + ' wind' : ''}`}; $('lc').textContent = 'Conditions: ' + logCond.txt; } else $('lc').textContent = 'Search a place first to fill in conditions.'; }
+  else if (b.id === 'lsave'){ if (!$('ld').value){ $('lc').textContent = 'Pick a date first.'; return; } const L = load('sb-log'); L.push({d:$('ld').value, p:$('lp').value, min:+$('lm').value || 0, w:$('lw').value, rate:+$('lr').value, n:$('ln').value, h:logCond ? logCond.h : null, wind:logCond && logCond.wind != null ? logCond.wind : null, txt:logCond ? logCond.txt : ''}); store('sb-log', L); logCond = null; drawLog(); $('lc').textContent = 'Session saved.'; }
+  else if (b.dataset.del != null && confirm('Delete this session?')){ const L = load('sb-log'); L.splice(+b.dataset.del, 1); store('sb-log', L); drawLog(); }
 });
 drawLog();
 // Share
