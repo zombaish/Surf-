@@ -153,29 +153,72 @@ button.go{background:var(--teal);color:var(--on);border-color:var(--teal);box-sh
 .themes i{width:24px;height:24px;border-radius:50%}
 .themes button[aria-pressed=true]{border:2px solid var(--teal)}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+/* ===== v0.18 professional pass: type, layout, imagery ===== */
+html{font-size:16px}
+body{font-family:Inter,"SF Pro Text","Segoe UI",system-ui,Roboto,sans-serif;letter-spacing:-.005em}
+h1,.verdict h2{font-family:inherit}
+h3{font-size:1.05rem;font-weight:700;letter-spacing:-.01em}
+.hero{position:relative;overflow:hidden;border-radius:24px;margin:4px 0 16px;padding:26px 22px 80px;color:#fff;background:linear-gradient(160deg,#0a3441,#0f6b75)}
+html[data-theme=sand] .hero{background:linear-gradient(160deg,#4a2210,#a8481f)}
+html[data-theme=dusk] .hero{background:linear-gradient(160deg,#071a2c,#12466a)}
+.hero h1{display:block;margin:2px 0 6px;font-size:2.1rem;font-weight:800;letter-spacing:-.035em}
+.eyebrow{margin:0;font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#ffd98a}
+.hero .sub{margin:0;max-width:24em;font-size:.95rem;color:rgba(255,255,255,.84)}
+.hero #ver{position:absolute;top:14px;right:14px;margin:0;font-size:.66rem;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.14);color:#fff}
+.scene{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:84px}
+form.row{flex-wrap:nowrap;align-items:center;gap:2px;padding:4px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 22px -14px rgba(8,38,52,.35)}
+form.row:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px color-mix(in srgb,var(--teal) 25%,transparent)}
+form.row .sbox{flex:1 1 auto;min-width:0}
+form.row input{border:0;background:transparent;min-height:46px;padding:0 12px;min-width:0}
+form.row input:focus-visible{outline:none}
+form.row button{flex:none;width:46px;min-height:46px;padding:0;border:0;border-radius:12px;display:grid;place-items:center;background:transparent;color:var(--mute);box-shadow:none}
+form.row button svg{width:21px;height:21px}
+form.row button.go{background:var(--teal);color:var(--on)}
+.where{font-size:.8rem;margin:12px 2px}
+.lab{margin:14px 2px 6px;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.lvname{margin:6px 2px 0;font-size:.82rem}
+.levels,.whens{background:color-mix(in srgb,var(--line) 60%,transparent);padding:3px;border-radius:14px;gap:2px;margin:0 0 4px}
+.levels button,.whens button{min-height:42px;border:0;background:transparent;box-shadow:none;border-radius:11px}
+.levels button[aria-pressed=true],.whens button[aria-pressed=true]{background:var(--teal);color:var(--on);box-shadow:0 2px 8px -2px rgba(8,38,52,.35)}
+.verdict{padding:20px;border-radius:22px}
+.verdict h2{font-size:1.55rem;font-weight:800;letter-spacing:-.025em}
+#out:empty,#week:empty{min-height:230px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 150 100' fill='none' stroke='%230f8a97' stroke-width='3' stroke-linecap='round'%3E%3Ccircle cx='75' cy='28' r='12'/%3E%3Cpath d='M10 60c10 0 10-8 20-8s10 8 20 8 10-8 20-8 10 8 20 8 10-8 20-8 10 8 20 8M10 78c10 0 10-8 20-8s10 8 20 8 10-8 20-8 10 8 20 8 10-8 20-8 10 8 20 8'/%3E%3C/svg%3E") center 12px/150px no-repeat}
+#out:empty::before,#week:empty::before{content:'Search for a beach or town above to see how the surf looks.';display:block;padding:150px 20px 0;text-align:center;color:var(--mute)}
+.feat{border-top:1px solid var(--line)}
+.feat summary{cursor:pointer;font-weight:600;padding:14px 2px;list-style:none;display:flex;justify-content:space-between}
+.feat summary::after{content:'›';transition:transform .2s;color:var(--mute)}.feat[open] summary::after{transform:rotate(90deg)}
+.feat>div{padding:0 2px 14px}.feat h4{margin:16px 0 4px;font-size:.95rem}.feat p{margin:0 0 8px;font-size:.92rem}
+.fld{display:grid;gap:10px}.fld label{display:grid;gap:4px;font-size:.8rem;color:var(--mute)}
+.feat input:not([type=checkbox]),.feat select,.feat textarea{width:100%;min-width:0;min-height:46px;padding:10px 12px;font:inherit;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)}
+.tick{display:flex;gap:10px;align-items:center;padding:6px 0;font-size:.92rem}.tick input{width:20px;height:20px;min-height:0;min-width:0;padding:0;flex:none}
+.eq{margin:8px 0}.eq .fb{display:block;color:var(--mute);margin-top:2px}
 </style>
 </head>
 <body>
 <main>
 <header class="hero">
-<h1><svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="6.5" r="2.5"/><path d="M2 13c2.5 0 2.5-2.5 5-2.5S9.5 13 12 13s2.5-2.5 5-2.5S19.5 13 22 13M2 18.5c2.5 0 2.5-2.5 5-2.5s2.5 2.5 5 2.5 2.5-2.5 5-2.5 2.5 2.5 5 2.5"/></svg>Shorebreak <small id="ver"></small></h1>
-<p class="sub">Is the surf right for you today? Plain-English answers from free marine forecast data.</p>
-<svg class="swell" viewBox="0 0 400 40" preserveAspectRatio="none" aria-hidden="true"><path d="M0 24c40 0 40-16 80-16s40 16 80 16 40-16 80-16 40 16 80 16 40-16 80-16v32H0z"/></svg>
+<small id="ver"></small>
+<p class="eyebrow">Beginner surf guide</p>
+<h1>Shorebreak</h1>
+<p class="sub">Is the surf right for your level today? Plain-English answers from free marine forecast data.</p>
+<svg class="scene" viewBox="0 0 400 84" preserveAspectRatio="none" aria-hidden="true"><circle cx="338" cy="30" r="26" fill="#ffd98a" opacity=".18"/><circle cx="338" cy="30" r="14" fill="#ffd98a"/><path fill="#fff" opacity=".1" d="M0 40c50 0 50-18 100-18s50 18 100 18 50-18 100-18 50 18 100 18v44H0z"/><path fill="#fff" opacity=".16" d="M0 56c40 0 40-14 80-14s40 14 80 14 40-14 80-14 40 14 80 14 40-14 80-14v42H0z"/><path style="fill:var(--bg)" d="M0 70c33 0 33-10 66-10s33 10 66 10 33-10 66-10 33 10 66 10 33-10 66-10 33 10 70 10v14H0z"/></svg>
 </header>
 
 <form class="row" id="f" role="search">
   <div class="sbox">
     <input id="q" type="search" placeholder="Beach or town, e.g. Newquay" aria-label="Search for a beach or town" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="sugg" aria-autocomplete="list" enterkeyhint="search">
   </div>
-  <button class="go" type="submit">Check surf</button>
-  <button type="button" id="geo">Use my location</button>
+  <button class="go" type="submit" aria-label="Check surf" title="Check surf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
+  <button type="button" id="geo" aria-label="Use my location" title="Use my location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/></svg></button>
 </form>
 <ul class="sugg" id="sugg" role="listbox" aria-label="Matching places" hidden></ul>
 <p class="where" id="where" aria-live="polite"></p>
 
 <div id="strip">
+<p class="lab">Your level</p>
 <div class="levels" id="levels" role="group" aria-label="Your surf level"></div>
 <p class="lvname" id="lvname"></p>
+<p class="lab">Time of day</p>
 <div class="whens" id="when" role="group" aria-label="Time of day"></div>
 </div>
 
@@ -183,12 +226,18 @@ button.go{background:var(--teal);color:var(--on);border-color:var(--teal);box-sh
 <div class="tab" id="t-week" hidden><div id="week"></div></div>
 <div class="tab" id="t-beaches" hidden><input id="sq" type="search" placeholder="Search beaches nearby, e.g. Fistral" aria-label="Search beaches nearby" autocomplete="off"><section class="card" id="spots" hidden></section><p class="empty">Search for a beach or town above to see nearby beaches.</p></div>
 <div class="tab" id="t-skills" hidden>
-  <section class="card"><h3>Your level</h3><p>Your level sets what counts as good for you: the wave size limits, which beaches are shown and how cautious the advice is. Change it with the 1 to 5 buttons at the top of Today, Week or Beaches.</p><button type="button" id="qbtn">Not sure of your level? Take the 1-minute quiz</button><div id="quiz" aria-live="polite"></div></section>
+  <section class="card"><h3>Your level</h3><p>Your level decides what counts as good for you. Change it with the 1 to 5 buttons on Today, Week or Beaches.</p><button type="button" id="qbtn">Not sure of your level? Take the 1-minute quiz</button><div id="quiz" aria-live="polite"></div></section>
   <section class="card"><h3>Progress checklists</h3><p>Coming soon: skills to tick off, drills to practise, level-ups and a “conditions felt too big” button.</p></section>
 </div>
 <div class="tab" id="t-more" hidden>
   <section class="card"><h3>Appearance</h3><div class="themes" id="themes" role="group" aria-label="Colour theme"></div></section>
-  <section class="card"><h3>Coming soon</h3><p>Safety Center, Etiquette and lineup rules, Gear Guide, Session Log, and a shareable “Should I go?” link.</p></section>
+  <section class="card feats"><h3>Tools</h3>
+<details class="feat"><summary>Safety Center</summary><div id="f-safety"></div></details>
+<details class="feat"><summary>Etiquette and lineup rules</summary><div id="f-etiq"></div></details>
+<details class="feat"><summary>Gear guide</summary><div id="f-gear"></div></details>
+<details class="feat"><summary>Session log</summary><div id="f-log"></div></details>
+<details class="feat"><summary>Share a “Should I go?” link</summary><div id="f-share"></div></details>
+</section>
   <p class="note">Forecasts are estimates. The main verdict judges wind against the swell direction; the nearby beaches use their own angles, estimated from the coastline. Always check with local lifeguards and signage before you paddle out.<br>Data: Open-Meteo (marine and weather), OpenStreetMap contributors (map and beaches, via Photon and Overpass), Copernicus DEM via Open-Meteo (beach angles), OSRM (drive times), Leaflet (map).</p>
 </div>
 </main>
@@ -348,7 +397,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.17 · 22 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.20 · 22 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -447,7 +496,7 @@ function render(){
   const forYou = i<0 ? (when === 'any' ? (data.k ? 'No suitable window '+data.label+'.' : 'No safe window left today.') : 'Nothing suitable in that part of the day.') :
     myBand==='g' ? `For your level: go. Best window ${hr(win[0].hour)} to ${hr(win[1].hour+1)}.` :
     myBand==='o' ? `For your level: marginal. If you go, aim for ${hr(win[0].hour)} to ${hr(win[1].hour+1)} and stay close to shore.` :
-    'Conditions here don’t suit your level today.';
+    'Conditions here don’t suit your level '+data.label+'.';
   const ref = win[0] || usable[0], s0 = Engine.score({...ref, daylight:true}, level) || {type:'cross'};
   const reasons = [];
   reasons.push(`Waves are ${Engine.bodyHeight(ref.h)} (${fmtH(ref.h)}). ${ref.h > CONFIG.levels[level-1].maxH ? 'That is bigger than level '+level+' should handle.' : ref.h < CONFIG.levels[level-1].idealMin ? 'Small, so expect a slow, mellow session.' : 'A comfortable size for level '+level+'.'}`);
@@ -840,7 +889,7 @@ function drawSpots(){
   const dayWord = data.k===0 ? 'today' : data.k===1 ? 'tomorrow' : dayName(data.date, true);
   const goodOnes = ranked.filter(x => x.r.total >= CONFIG.okAt).length;
   const title = found ? `Results for “${esc(q)}”` : 'Best beaches ' + dayWord;
-  const intro = found ? (found.length ? `Ranked for level ${level}.` : `No beach called “${esc(q)}” in the area we searched. Try another spelling or a nearby town.`) : here < CONFIG.okAt && goodOnes ? `Not great here for level ${level}, but these nearby beaches should be better:`
+  const intro = found ? (found.length ? `Ranked for level ${level}.` : `No beach called “${esc(q)}” in the area we searched. Try another spelling or a nearby town.`) : here < CONFIG.okAt && goodOnes ? `Not ideal here for level ${level}, but these nearby beaches should be better:`
     : goodOnes ? `Nearby beaches, best first for level ${level}:`
     : `Nothing nearby looks good for level ${level} ${data.label}. These are the least bad. Consider another day, a bigger travel distance, or a lesson with a surf school.`;
   const cards = ranked.map(({s,r},i) => {
@@ -944,6 +993,7 @@ function go(id){
   window.scrollTo(0, 0);
   try { history.replaceState(null, '', '#' + t.id); } catch(e){}
 }
+const GOHASH = location.hash;   // a shared link starts with #go=
 go((location.hash || '').slice(1));
 
 /* ===== Colour themes (stored on this device) ===== */
@@ -957,6 +1007,67 @@ function setTheme(t){
 $('themes').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setTheme(b.dataset.t); });
 let th = 'auto'; try { th = localStorage.getItem('sb-theme') || 'auto'; } catch(e){}
 setTheme(THEMES.some(x => x[0] === th) ? th : 'auto');
+
+/* ===== Tools (More tab): Safety, Etiquette, Gear, Session log, Share ===== */
+const H = (t, p) => `<h4>${t}</h4><p>${p}</p>`;
+const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} };
+const load = k => { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch(e){ return []; } };
+const shareLink = () => { const u = new URL(location.href); u.hash = `go=${center.lat.toFixed(3)},${center.lon.toFixed(3)},${level},${encodeURIComponent(place)}`; return u.toString(); };
+async function shareIt(text){
+  const url = center && place ? shareLink() : location.href.split('#')[0];
+  try { if (navigator.share){ await navigator.share({title:'Shorebreak', text, url}); return; }
+    await navigator.clipboard.writeText(text + ' ' + url); tip.textContent = 'Link copied. Paste it into a message.'; tip.hidden = false; setTimeout(() => { tip.hidden = true; }, 2500); } catch(e){}
+}
+// Safety
+const SAFETY = [['Rip currents','Look for a calm-looking channel of choppy, murky or foamy water heading out to sea. If one grabs you, stay calm and don’t swim against it. Float, or swim across it (parallel to the beach) until it eases, then head in. Wave an arm and shout if you need help.'],['Read the lineup first','Watch for ten minutes before you go in. Note where the waves break, where people sit, and where the whitewater and channels are.'],['Never surf alone','Go with someone, or where a lifeguard is on duty, and stay between the red and yellow flags.'],['Sun and cold','Use reef-safe sunscreen. In cold water wear the right wetsuit. Shivering, numb hands or confusion mean get out and warm up.'],['When to skip','Waves bigger than your level, strong onshore wind, fading light, or you feel tired or unsure. When in doubt, don’t go out.']];
+$('f-safety').innerHTML = SAFETY.map(([t,p]) => H(t,p)).join('') + '<h4>Before you go in</h4>' + ['I checked the forecast and the flags','I know where I’ll get out','My leash and board are checked','I have water and sun protection','Someone knows my plan'].map(t => `<label class="tick"><input type="checkbox"> ${t}</label>`).join('') + '<p><button type="button" id="plan">Tell someone your plan</button></p><p class="legend">Forecasts are estimates. Always check with local lifeguards and signage.</p>';
+$('plan').onclick = () => shareIt(`I’m planning to surf near ${place || 'the coast'}. Here’s the forecast, please check in on me:`);
+// Etiquette
+const ETIQ = [['Right of way','The surfer closest to where the wave breaks (the peak) has priority. If you’re further out or on the shoulder, let them have it.'],['Don’t drop in','Never take off on a wave someone else already has. Look both ways before you paddle.'],['Paddle out wide','Go around the lineup through the channel or whitewater, not across the path of surfers riding in.'],['Apologise','If you get it wrong, say sorry and move on. A wave of the hand goes a long way.'],['Share the waves','Take turns, don’t hog the peak, and let others have the good ones.'],['Respect locals','Be friendly, give space, and learn a spot’s unwritten rules before you paddle out.'],['Control your board','Never let go of it. Duck under or bail safely so it doesn’t hit anyone.']];
+const EQ = [['Two surfers want the same wave. Who goes?',['The one closest to where it breaks','The bigger surfer','Whoever paddles hardest'],0],['You’re paddling out and someone is riding toward you. You…',['Stop right where you are','Paddle wide, away from the breaking part','Paddle straight across their path'],1],['You drop in on someone by accident. You…',['Ignore it','Tell them it was their fault','Say sorry and give them space'],2]];
+$('f-etiq').innerHTML = ETIQ.map(([t,p]) => H(t,p)).join('') + '<h4>Quick quiz</h4>' + EQ.map(([q,o],qi) => `<div class="eq"><p><b>${q}</b></p>${o.map((x,i) => `<button type="button" class="spot" data-q="${qi}" data-a="${i}">${x}</button>`).join('')}<small class="fb"></small></div>`).join('');
+$('f-etiq').addEventListener('click', e => { const b = e.target.closest('button[data-q]'); if (!b) return; const q = EQ[+b.dataset.q]; b.closest('.eq').querySelector('.fb').textContent = q[2] === +b.dataset.a ? '✓ Correct.' : '✕ Not quite. Best answer: ' + q[1][q[2]]; });
+// Gear
+const GEAR = ['Leash','Wax or traction pad','Rash vest','Reef-safe sunscreen','Fins (if your board needs them)','Board bag','Small first-aid kit'];
+$('f-gear').innerHTML = `<h4>Board finder</h4><div class="fld"><label>Weight (kg)<input id="gw" type="number" inputmode="decimal"></label><label>Height (cm)<input id="gh" type="number" inputmode="decimal"></label></div><p id="gb" class="legend">Enter your weight to see a board size.</p>
+<h4>Wetsuit finder</h4><div class="fld"><label>Water temperature (°C)<input id="gt" type="number" inputmode="decimal"></label></div><p id="gs" class="legend">Enter the water temperature.</p>
+<h4>Essentials (tick what you own)</h4>${GEAR.map((t,i) => `<label class="tick"><input type="checkbox" data-g="${i}"${load('sb-gear').includes(i) ? ' checked' : ''}> ${t}</label>`).join('')}
+<h4>Brand ideas</h4><p><b>Foam boards:</b> Budget: Wavestorm, cheap and forgiving. Mid: Softech, better build. Premium: Catch Surf, more fun once you’re riding.</p><p><b>Wetsuits:</b> Budget: Olaian (Decathlon). Mid: Rip Curl, O’Neill. Premium: Patagonia.</p><p><b>Leashes and traction:</b> FCS and Dakine are reliable. <b>Wax:</b> Sex Wax or Mr Zogs.</p><p class="legend">Editorial suggestions, not sponsored. Check current prices, reviews and fit.</p>`;
+function gearCalc(){
+  const w = +$('gw').value, h = +$('gh').value, t = $('gt').value === '' ? null : +$('gt').value;
+  const F = [[1.1,1.3],[.95,1.1],[.8,.95],[.65,.8],[.55,.65]][level-1], X = [[55,75],[55,75],[35,55],[15,35],[0,20]][level-1];
+  const ft = cm => { const i = Math.round(cm/2.54); return `${Math.floor(i/12)}’${i%12}”`; };
+  $('gb').innerHTML = w > 0 ? `<b>Level ${level}:</b> about ${Math.round(w*F[0])} to ${Math.round(w*F[1])} litres${h > 0 ? `, roughly ${ft(h+X[0])} to ${ft(h+X[1])} long` : ''}. ${['A soft-top foam board','A foam or soft-top funboard','A funboard or mini-mal','A fish or hybrid','A shortboard or hybrid'][level-1]}. ${['Rent for now.','Rent, or buy a cheap foam board.','Buy a used funboard.','Buy.','Buy.'][level-1]} In small, weak surf choose the top of the range.` : 'Enter your weight to see a board size.';
+  const W = [[20,'a rash vest or shorty'],[17,'a 2 mm shorty or 3/2 mm steamer'],[14,'a 3/2 mm steamer'],[11,'a 4/3 mm steamer plus boots'],[8,'a 5/4 mm hooded steamer, boots and gloves'],[-99,'a 5/4/3 mm hooded winter suit, thick boots and gloves']];
+  const m = t == null ? null : W.find(x => t >= x[0]);
+  $('gs').textContent = m ? `At ${t}°C wear ${m[1]}. Windy days feel colder, so go one step warmer.` : 'Enter the water temperature.';
+}
+$('f-gear').addEventListener('input', gearCalc);
+$('f-gear').addEventListener('change', e => { const c = e.target; if (c.dataset.g == null) return; const on = load('sb-gear').filter(i => i !== +c.dataset.g); if (c.checked) on.push(+c.dataset.g); store('sb-gear', on); });
+const gd = $('f-gear').parentElement; gd.addEventListener('toggle', () => { if (!gd.open) return; const r = data && data.rows.find(x => x.sst != null); if ($('gt').value === '' && r) $('gt').value = Math.round(r.sst); gearCalc(); });
+// Session log
+let logCond = null;
+function drawLog(){
+  const L = load('sb-log'), n = L.length, mins = L.reduce((a,x) => a + (x.min || 0), 0), by = {};
+  L.filter(x => x.h != null).forEach(x => { (by[Engine.bodyHeight(x.h)] = by[Engine.bodyHeight(x.h)] || []).push(x.rate); });
+  const best = Object.entries(by).map(([k,v]) => [k, v.reduce((a,b) => a + b, 0) / v.length]).sort((a,b) => b[1] - a[1])[0];
+  $('f-log').innerHTML = `<div class="fld"><label>Date<input id="ld" type="date" value="${new Date().toISOString().slice(0,10)}"></label><label>Where<input id="lp" type="text" value="${esc(place || '')}"></label><label>Minutes in the water<input id="lm" type="number" inputmode="numeric" value="60"></label><label>What I worked on<input id="lw" type="text" placeholder="e.g. pop-up, paddling"></label><label>Rating<select id="lr">${[5,4,3,2,1].map(i => `<option value="${i}">${i} of 5</option>`).join('')}</select></label><label>Notes<textarea id="ln" rows="2"></textarea></label></div>
+  <p><button type="button" id="lfill">Fill from the forecast</button> <button type="button" class="go" id="lsave" style="width:auto;padding:0 16px">Save session</button></p><p class="legend" id="lc">${logCond ? 'Conditions: ' + logCond.txt : 'Conditions are optional.'}</p>`
+  + (n ? `<h4>Insights</h4><p>${n} session${n > 1 ? 's' : ''}, ${(mins / 60).toFixed(1)} h in the water, average rating ${(L.reduce((a,x) => a + x.rate, 0) / n).toFixed(1)}.${best ? ` You rate sessions highest at ${best[0]} waves.` : ''}</p><h4>Your sessions</h4>` + L.map((x,i) => `<p>${x.d} · ${esc(x.p || '')} · ${'★'.repeat(x.rate)} · ${x.min} min${x.txt ? ' · ' + x.txt : ''}${x.w ? '<br>' + esc(x.w) : ''}${x.n ? '<br><small>' + esc(x.n) + '</small>' : ''} <button type="button" class="link" data-del="${i}">Delete</button></p>`).reverse().join('') : '');
+}
+$('f-log').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'lfill'){ const r = data && data.rows.find(x => !x.past && x.h != null);
+    if (r){ logCond = {h:r.h, txt:`${Engine.bodyHeight(r.h)} (${fmtH(r.h)})${r.period != null ? ' · ' + Math.round(r.period) + 's' : ''}`}; $('lc').textContent = 'Conditions: ' + logCond.txt; } else $('lc').textContent = 'Search a place first to fill in conditions.'; }
+  else if (b.id === 'lsave'){ const L = load('sb-log'); L.push({d:$('ld').value, p:$('lp').value, min:+$('lm').value || 0, w:$('lw').value, rate:+$('lr').value, n:$('ln').value, h:logCond ? logCond.h : null, txt:logCond ? logCond.txt : ''}); store('sb-log', L); logCond = null; drawLog(); }
+  else if (b.dataset.del != null){ const L = load('sb-log'); L.splice(+b.dataset.del, 1); store('sb-log', L); drawLog(); }
+});
+drawLog();
+// Share
+$('f-share').innerHTML = '<p>Send a friend a link that opens the same beach and level.</p><p><button type="button" class="go" id="sh" style="width:auto;padding:0 16px">Share a link</button></p><p class="legend" id="shm"></p>';
+$('sh').onclick = () => { if (!place){ $('shm').textContent = 'Search a beach or town first.'; return; } shareIt(`Should I go surfing near ${place}? Open this to see the forecast at level ${level}:`); };
+const gm = /^#go=([-\d.]+),([-\d.]+),([1-5]),(.+)$/.exec(GOHASH);
+if (gm) setTimeout(() => { level = +gm[3]; drawLevels(); run(+gm[1], +gm[2], decodeURIComponent(gm[4])); go('today'); }, 0);   // open a shared link
 drawLevels(); drawWhens();
 </script>
 </body>
