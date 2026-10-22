@@ -244,7 +244,7 @@ form.row button.go{background:var(--teal);color:var(--on)}
 #map.fs .leaflet-top{top:env(safe-area-inset-top,0px)}#map.fs .leaflet-bottom{bottom:env(safe-area-inset-bottom,0px)}
 body.fs-lock{overflow:hidden}
 .card.feat{border-top:1px solid var(--line)}.card.feat>h3{margin:0 0 6px}.card.feat>div{padding:0}
-#kitseg{grid-template-columns:repeat(3,1fr);margin-bottom:6px}#t-kit [hidden],#t-skills [hidden]{display:none!important}
+#kitseg{grid-template-columns:repeat(3,1fr);margin-bottom:6px}#t-more [hidden],#t-beaches [hidden],#t-skills [hidden]{display:none!important}
 .spotw{position:relative}.spotw .spot{padding-right:58px}.fav{position:absolute;top:10px;right:6px;width:46px;height:46px;min-height:46px;padding:0;border:0;background:none;font-size:1.6rem;line-height:1;color:#c98a00}.fav[aria-pressed=true]{color:#e0a800}
 
 /* ===== v0.47 design: golden-hour coast. One strong moment (the hero and the verdict card); everything else stays quiet ===== */
@@ -267,14 +267,14 @@ main{padding-bottom:112px}
 .hero .sub{margin:0 0 6px;max-width:19em;font-size:.95rem;line-height:1.45;color:rgba(255,255,255,.9)}
 .hero #ver{position:absolute;top:14px;right:14px;margin:0;font-size:.66rem;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.16);color:#fff}
 .hero .scene{position:relative;display:block;width:calc(100% + 44px);max-width:none;height:auto;margin:4px -22px 0;overflow:visible;z-index:0}
-/* compact header once a forecast is showing, or on any tab but Today */
-body.loaded .hero,body:not([data-tab=today]) .hero{background:linear-gradient(100deg,var(--sk0),var(--sk1));padding:14px 18px;border-radius:20px;margin:4px 0 12px;box-shadow:0 10px 24px -18px rgba(7,27,48,.6)}
-body.loaded .hero .scene,body:not([data-tab=today]) .hero .scene,body.loaded .hero .sub,body:not([data-tab=today]) .hero .sub,body.loaded .hero .eyebrow,body:not([data-tab=today]) .hero .eyebrow{display:none}
-body.loaded .hero h1,body:not([data-tab=today]) .hero h1{margin:0;font-size:1.3rem;letter-spacing:-.02em}
-body.loaded .hero #ver,body:not([data-tab=today]) .hero #ver{top:50%;transform:translateY(-50%)}
+/* compact header on any tab but Today (Today always keeps the full hero scene) */
+body:not([data-tab=today]) .hero{background:linear-gradient(100deg,var(--sk0),var(--sk1));padding:14px 18px;border-radius:20px;margin:4px 0 12px;box-shadow:0 10px 24px -18px rgba(7,27,48,.6)}
+body:not([data-tab=today]) .hero .scene,body:not([data-tab=today]) .hero .sub,body:not([data-tab=today]) .hero .eyebrow{display:none}
+body:not([data-tab=today]) .hero h1{margin:0;font-size:1.3rem;letter-spacing:-.02em}
+body:not([data-tab=today]) .hero #ver{top:50%;transform:translateY(-50%)}
 /* search floats over the bottom of the hero */
 form.row{position:relative;z-index:2;margin:-26px 8px 0;padding:5px;border:0;border-radius:20px;background:var(--card);box-shadow:0 14px 30px -14px rgba(7,27,48,.45),0 0 0 1px color-mix(in srgb,var(--line) 70%,transparent)}
-body.loaded form.row,body:not([data-tab=today]) form.row{margin:0}
+body:not([data-tab=today]) form.row{margin:0}
 form.row:focus-within{box-shadow:0 14px 30px -14px rgba(7,27,48,.45),0 0 0 2px var(--teal)}
 form.row button.go{border-radius:15px;background:var(--teal);color:var(--on)}
 .where{margin:10px 6px 0;font-size:.85rem;color:var(--mute)}
@@ -355,6 +355,15 @@ nav#nav button[aria-current=page]::after{display:none}
 details.feat>summary{min-height:48px}
 details.feat>summary::after{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:color-mix(in srgb,var(--teal) 13%,transparent);color:var(--teal);font-size:1.25rem;font-weight:700;line-height:1}
 
+
+/* v0.49: five tabs, with sub-views inside Beaches and Kit & more */
+nav#nav button{font-size:.66rem;white-space:nowrap}
+#t-beaches .subnav,#t-more .subnav{display:flex;gap:24px;margin:0 2px 14px;border-bottom:1px solid var(--line)}
+#t-beaches .subnav button,#t-more .subnav button{flex:none;min-height:44px;padding:0 2px;border:0;border-bottom:3px solid transparent;border-radius:0;background:none;box-shadow:none;margin-bottom:-1px;color:var(--mute);font-size:.95rem;font-weight:650}
+#t-beaches .subnav button[aria-pressed=true],#t-more .subnav button[aria-pressed=true]{color:var(--teal);border-bottom-color:var(--teal)}
+#t-beaches .subnav button:active,#t-more .subnav button:active{transform:none}
+#kitseg{grid-template-columns:repeat(4,1fr)}   /* four sections since Buddy was added; three columns pushed it onto a second row */
+#kitseg button{font-size:.74rem;padding:0 2px;white-space:nowrap}
 </style>
 </head>
 <body data-tab="today">
@@ -409,9 +418,8 @@ details.feat>summary::after{display:grid;place-items:center;width:30px;height:30
 </div>
 
 <div class="tab" id="t-today"><div id="out" aria-live="polite"></div><p class="note">Forecasts are estimates. Always check with local lifeguards and signage.</p></div>
-<div class="tab" id="t-report" hidden><div id="rbar"><input id="rq" type="search" placeholder="Search a beach for its report, e.g. Fistral" aria-label="Search beaches nearby for a report" autocomplete="off"><select id="rsel" aria-label="Pick any beach nearby for a report" hidden></select><p class="legend" id="rhint" role="status" hidden></p></div><div id="report"></div></div>
 <div class="tab" id="t-week" hidden><div id="week"></div></div>
-<div class="tab" id="t-beaches" hidden><input id="sq" type="search" placeholder="Search beaches nearby, e.g. Fistral" aria-label="Search beaches nearby" autocomplete="off"><select id="bsel" aria-label="Pick any beach nearby" hidden></select><section class="card" id="spots" hidden></section><p class="empty">Search for a beach or town above to see nearby beaches.</p></div>
+<div class="tab" id="t-beaches" hidden><div class="subnav" id="bseg" role="group" aria-label="Beaches sections"><button type="button" aria-pressed="true" data-v="find">Find a beach</button><button type="button" aria-pressed="false" data-v="report">Beach report</button></div><div id="b-find"><input id="sq" type="search" placeholder="Search beaches nearby, e.g. Fistral" aria-label="Search beaches nearby" autocomplete="off"><select id="bsel" aria-label="Pick any beach nearby" hidden></select><section class="card" id="spots" hidden></section><p class="empty">Search for a beach or town above to see nearby beaches.</p></div><div id="b-report" hidden><div id="rbar"><input id="rq" type="search" placeholder="Search a beach for its report, e.g. Fistral" aria-label="Search beaches nearby for a report" autocomplete="off"><select id="rsel" aria-label="Pick any beach nearby for a report" hidden></select><p class="legend" id="rhint" role="status" hidden></p></div><div id="report"></div></div></div>
 <div class="tab" id="t-skills" hidden>
   <div class="whens" id="skseg" role="group" aria-label="Skills sections" style="grid-template-columns:repeat(2,1fr);margin-bottom:6px"><button type="button" aria-pressed="true" data-k="main">My level and progress</button><button type="button" aria-pressed="false" data-k="learn">Learn</button></div>
   <div id="sk-main">
@@ -454,15 +462,16 @@ details.feat>summary::after{display:grid;place-items:center;width:30px;height:30
 </section>
   </div>
 </div>
-<div class="tab" id="t-kit" hidden>
-  <h2 style="margin:4px 0 12px;font-size:1.25rem">My kit and sessions</h2>
+<div class="tab" id="t-more" hidden>
+  <div class="subnav" id="mseg" role="group" aria-label="Kit and settings"><button type="button" aria-pressed="true" data-v="kit">Kit &amp; log</button><button type="button" aria-pressed="false" data-v="settings">Settings &amp; safety</button></div>
+<div id="m-kit">
   <div class="whens" id="kitseg" role="group" aria-label="My kit sections"><button type="button" aria-pressed="true" data-k="gear">Gear</button><button type="button" aria-pressed="false" data-k="log">Session log</button><button type="button" aria-pressed="false" data-k="share">Share</button><button type="button" aria-pressed="false" data-k="buddy">Buddy</button></div>
   <section class="card feat" id="k-gear"><h3>Board finder and gear</h3><div id="f-gear"></div></section>
   <section class="card feat" id="k-log" hidden><h3>Session log</h3><div id="f-log"></div></section>
   <section class="card feat" id="k-share" hidden><h3>Share a “Should I go?” link</h3><div id="f-share"></div></section>
   <section class="card feat" id="k-buddy" hidden><h3>Buddy check-in</h3><div id="f-buddy"></div></section>
 </div>
-<div class="tab" id="t-more" hidden>
+<div id="m-settings" hidden>
   <section class="card"><h3>Units</h3><div id="units"></div></section>
   <section class="card"><h3>Back up and restore</h3>
     <p class="legend" style="margin:0 0 10px">Your level, progress, favourites, notes, gear ticks, session log and settings live on this phone only. Save them to a file to move them to another phone or keep them safe.</p>
@@ -477,6 +486,7 @@ details.feat>summary::after{display:grid;place-items:center;width:30px;height:30
 <details class="feat"><summary>Etiquette and lineup rules</summary><div id="f-etiq"></div></details>
 </section>
   <p class="note">Forecasts are estimates. The main verdict judges wind against the swell direction; the nearby beaches use their own angles, estimated from the coastline. Always check with local lifeguards and signage before you paddle out.<br>Data: Open-Meteo (marine and weather), OpenStreetMap contributors (map and beaches, via Photon and Overpass), Copernicus DEM via Open-Meteo (beach angles), OSRM (drive times), Leaflet (map).</p>
+</div>
 </div>
 </main>
 <nav id="nav" aria-label="Sections"></nav>
@@ -678,7 +688,7 @@ const $ = id => document.getElementById(id);
 const revealOpen = new Set();   // which Show / Hide panels are open, so a redraw doesn't fold them shut again
 const reveal = (id, label, html) => `<details class="reveal" data-rv="${id}"${revealOpen.has(id) ? ' open' : ''}><summary><span class="rv-show">Show ${label}</span><span class="rv-hide">Hide ${label}</span></summary><div class="rv-body">${html}</div></details>`;
 document.addEventListener('toggle', e => { const d = e.target; if (d && d.dataset && d.dataset.rv){ if (d.open) revealOpen.add(d.dataset.rv); else revealOpen.delete(d.dataset.rv); } }, true);
-const VERSION = '0.48 · 22 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.51 · 22 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -1112,7 +1122,7 @@ async function run(lat, lon, name){
   $('out').innerHTML = '<div class="skel" aria-label="Loading"></div>'; if ($('report')) $('report').innerHTML = '<div class="skel" aria-label="Loading"></div>';
   $('spots').hidden = false; drawSpots();
   const fcP = loadForecast(lat, lon).then(d => ({d}), e => ({e}));
-  const spP = Promise.race([findSpots(lat, lon), new Promise((_, rej) => setTimeout(() => rej(new Error('timed out')), 35000))]).then(l => ({l}), e => ({e}));
+  const spP = Promise.race([findSpots(lat, lon), new Promise((_, rej) => setTimeout(() => rej(new Error('timed out')), 60000))]).then(l => ({l}), e => ({e}));
   const fc = await fcP; if (id !== runId) return;
   if (fc.e){
     const sv = readSaved(), d = sv && hav(lat, lon, sv.lat, sv.lon) < 10 ? freshen(sv.d) : null;   // same place, still usable
@@ -1140,21 +1150,35 @@ async function run(lat, lon, name){
 
 /* ========= Spot finder: beaches from OpenStreetMap, drive times from OSRM, map from Leaflet ========= */
 /* Free OpenStreetMap sources are asked at the same time (Photon, Nominatim, Overpass); whatever answers within ~10 s is merged. */
+/* OpenStreetMap beach list via Overpass. The three public servers are asked at once and the first good answer wins.
+   A busy server often replies "timed out" with an empty list, so that counts as a failure, not as "no beaches".
+   If all fail, the area is asked for again in four smaller quarters, which are lighter for the server. */
+const OP_HOSTS = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
+const opFetch = (q, ms) => Promise.any(OP_HOSTS.map(h => getT(h + '?data=' + encodeURIComponent(q), ms).then(j => {
+  if (!j || !Array.isArray(j.elements) || (!j.elements.length && /runtime error|timed out|out of memory/i.test(j.remark || ''))) throw new Error('busy');
+  return j; })));
+const opKeep = j => j.elements.filter(e => e.tags && e.tags.name && !['private','no'].includes(e.tags.access)).map(e => { const c = e.center || e; return {name:e.tags.name, lat:c.lat, lon:c.lon}; });
+async function opBeaches(box, lat, lon, dy, dx){
+  try { return opKeep(await opFetch(box(lat-dy, lon-dx, lat+dy, lon+dx), 20000)); }
+  catch(e){
+    const parts = await Promise.allSettled([[-1,-1],[-1,0],[0,-1],[0,0]].map(([a,b]) => opFetch(box(lat+a*dy, lon+b*dx, lat+(a+1)*dy, lon+(b+1)*dx), 15000).then(opKeep)).flat());
+    const ok = parts.filter(r => r.status === 'fulfilled');
+    if (!ok.length) throw new Error('the free map servers did not answer');
+    return ok.flatMap(r => r.value);
+  }
+}
 async function beachesNear(lat, lon, radiusKm){
   const dy = radiusKm/111.2, dx = dy/Math.cos(lat*R_);
   const ph = (la, lo, r) => getT(`https://photon.komoot.io/reverse?lat=${la}&lon=${lo}&radius=${Math.min(r,100)}&limit=50&osm_tag=natural:beach&lang=en`, 9000)
     .then(g => g.features.filter(f => f.properties && f.properties.name).map(f => ({name:f.properties.name, lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0]})));
-  const op = host => getT(host + '?data=' + encodeURIComponent(`[out:json][timeout:9];nwr["natural"="beach"]["name"](around:${radiusKm*1000},${lat},${lon});out center tags;`), 10000)
-    .then(j => j.elements.filter(e => e.tags && e.tags.name && !['private','no'].includes(e.tags.access)).map(e => { const c = e.center || e; return {name:e.tags.name, lat:c.lat, lon:c.lon}; }));
-  // Photon only returns the 50 nearest, so also ask around the north, south, east and west edges to reach every coast
-  const spots = radiusKm >= 20 ? [[0,0,1],[1,0,.6],[-1,0,.6],[0,1,.6],[0,-1,.6]] : [[0,0,1]];
+  const opBox = (a,b,c,d) => `[out:json][timeout:20];nwr["natural"="beach"]["name"](${a},${b},${c},${d});out center tags;`;   // a box is far cheaper for the server than a circle
+  // Photon only returns the 50 nearest, so also ask around the edges and corners to reach every coast
+  const spots = radiusKm >= 20 ? [[0,0,1],[1,0,.6],[-1,0,.6],[0,1,.6],[0,-1,.6],[1,1,.5],[1,-1,.5],[-1,1,.5],[-1,-1,.5]] : [[0,0,1]];
   const jobs = [
     ...spots.map(([a,b,f]) => ph(lat + a*dy*.55, lon + b*dx*.55, radiusKm*f)),
     getT(`https://nominatim.openstreetmap.org/search?q=beach&format=jsonv2&limit=40&bounded=1&viewbox=${lon-dx},${lat+dy},${lon+dx},${lat-dy}`, 9000)
       .then(a => a.filter(p => p.type === 'beach' && p.name).map(p => ({name:p.name, lat:+p.lat, lon:+p.lon}))),
-    op('https://overpass-api.de/api/interpreter'),
-    op('https://overpass.kumi.systems/api/interpreter'),
-    op('https://overpass.private.coffee/api/interpreter')
+    opBeaches(opBox, lat, lon, dy, dx)
   ];
   const res = await Promise.allSettled(jobs), ok = res.filter(r => r.status === 'fulfilled');
   if (!ok.length) throw new Error('the free map servers did not answer');
@@ -1217,14 +1241,14 @@ async function addFacing(list){
 }
 
 async function findSpots(lat, lon){
-  const rk = Math.round(reachKm()), ck = 'sb-spots7:' + lat.toFixed(2) + ',' + lon.toFixed(2) + ',' + rk;
+  const rk = Math.round(reachKm()), ck = 'sb-spots8:' + lat.toFixed(2) + ',' + lon.toFixed(2) + ',' + rk;
   try { const c = JSON.parse(localStorage.getItem(ck) || 'null'); if (c && Date.now() - c.t < 864e5){ c.list.rest = c.rest || []; return c.list; } } catch(e){}
   let list = await beachesNear(lat, lon, rk); const rest = list.rest || [];
   let partial = false;
   try { list = await addFacing(list); partial = !!list.partial; } catch(e){ list.forEach(s => s.facing = null); partial = true; }   // service down: rank without angles
   list.rest = rest;
   if (list.length && !partial) try {   // an unclear angle is fine to remember; a failed lookup is not
-    Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-spots') && k !== ck){ let t = 0; try { t = JSON.parse(localStorage.getItem(k)).t; } catch(e){} if (k.startsWith('sb-spots6') || !(Date.now() - t < 864e5)) localStorage.removeItem(k); } });   // old and stale lists
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-spots') && k !== ck){ let t = 0; try { t = JSON.parse(localStorage.getItem(k)).t; } catch(e){} if (k.startsWith('sb-spots6') || k.startsWith('sb-spots7') || !(Date.now() - t < 864e5)) localStorage.removeItem(k); } });   // old and stale lists
     localStorage.setItem(ck, JSON.stringify({t:Date.now(), list, rest}));
   } catch(e){}
   return list;
@@ -1310,7 +1334,7 @@ async function reloadSpots(){
   if (!center) return;
   const id = runId, sid = ++spotRun; showN = 5; spotsData = null; spotsMsg = ''; triedQ.clear(); enrichRun++; drawSpots();
   try {
-    const l = await Promise.race([findSpots(center.lat, center.lon), new Promise((_, rej) => setTimeout(() => rej(new Error('timed out')), 35000))]);
+    const l = await Promise.race([findSpots(center.lat, center.lon), new Promise((_, rej) => setTimeout(() => rej(new Error('timed out')), 60000))]);
     await addDrive(center.lat, center.lon, l);
     if (id !== runId || sid !== spotRun) return;
     spotsData = l;
@@ -1758,22 +1782,38 @@ $('prog').addEventListener('toggle', e => { const d = e.target; if (d.dataset &&
 /* ===== Tabs: to add a feature, add one line to TABS and one <div class="tab" id="t-NAME" hidden> panel ===== */
 const ic = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const TABS = [
-  {id:'today', label:'Today', icon:ic('<circle cx="12" cy="6.5" r="2.5"/><path d="M2 13c2.5 0 2.5-2.5 5-2.5S9.5 13 12 13s2.5-2.5 5-2.5S19.5 13 22 13M2 18.5c2.5 0 2.5-2.5 5-2.5s2.5 2.5 5 2.5 2.5-2.5 5-2.5 2.5 2.5 5 2.5"/>'), strip:true}, {id:'report', label:'Report', icon:ic('<path d="M4 20V11M10 20V5M16 20v-8M22 20H2"/>'), strip:true}, {id:'week', label:'Week', icon:ic('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'), strip:true},
-  {id:'beaches', label:'Beaches', icon:ic('<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'), strip:true}, {id:'skills', label:'Skills', icon:ic('<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>')}, {id:'kit', label:'Kit & log', icon:ic('<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M9 8V6a3 3 0 0 1 6 0v2M4 13h16"/>')}, {id:'more', label:'More', icon:ic('<circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/>')}];
+  {id:'today', label:'Today', icon:ic('<circle cx="12" cy="6.5" r="2.5"/><path d="M2 13c2.5 0 2.5-2.5 5-2.5S9.5 13 12 13s2.5-2.5 5-2.5S19.5 13 22 13M2 18.5c2.5 0 2.5-2.5 5-2.5s2.5 2.5 5 2.5 2.5-2.5 5-2.5 2.5 2.5 5 2.5"/>'), strip:true}, {id:'week', label:'Week', icon:ic('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'), strip:true},
+  {id:'beaches', label:'Beaches', icon:ic('<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'), strip:true}, {id:'skills', label:'Skills', icon:ic('<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>')}, {id:'more', label:'Kit & more', icon:ic('<circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/>')}];
 $('nav').innerHTML = TABS.map(t => `<button type="button" data-t="${t.id}"><span aria-hidden="true">${t.icon}</span>${t.label}</button>`).join('');
 $('nav').addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(b.dataset.t); });
+/* Beaches holds two views (Find a beach, Beach report) and Kit & more holds two (Kit & log, Settings & safety).
+   Old links such as #report and #kit still land on the right view. */
+const VIEWS = Object.assign(Object.create(null), {find:['beaches','find'], report:['beaches','report'], kit:['more','kit'], settings:['more','settings']});
+let beachView = 'find', moreView = 'kit';
+const pressSeg = (seg, v) => $(seg).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
 function go(id){
+  let sub = null; if (VIEWS[id]) [id, sub] = VIEWS[id];
   const t = TABS.find(x => x.id === id) || TABS[0];
+  if (sub && t.id === 'beaches') beachView = sub;
+  if (sub && t.id === 'more') moreView = sub;
   TABS.forEach(x => { $('t-' + x.id).hidden = x.id !== t.id; });
   $('strip').hidden = !t.strip; document.body.dataset.tab = t.id;
   $('nav').querySelectorAll('button').forEach(b => b.setAttribute('aria-current', b.dataset.t === t.id ? 'page' : 'false'));
-  if (t.id === 'beaches' && data && spotsData) drawSpots();   // the map needs a visible box to size itself
-  if (t.id === 'report') drawReport();
+  if (t.id === 'beaches'){
+    pressSeg('bseg', beachView); $('b-find').hidden = beachView !== 'find'; $('b-report').hidden = beachView !== 'report';
+    if (beachView === 'report') drawReport(); else if (data && spotsData) drawSpots();   // the map needs a visible box to size itself
+  }
+  if (t.id === 'more'){
+    pressSeg('mseg', moreView); $('m-kit').hidden = moreView !== 'kit'; $('m-settings').hidden = moreView !== 'settings';
+    if (moreView === 'kit' && $('gt')) gearOpen();   // the panel is built a little further down on first load
+  }
   if (t.id === 'skills') drawChecks();
-  if (t.id === 'kit' && $('gt')) gearOpen();   // the panel is built a little further down on first load
   window.scrollTo(0, 0);
-  try { history.replaceState(null, '', '#' + t.id); } catch(e){}
+  const h = t.id === 'beaches' ? (beachView === 'report' ? 'report' : 'beaches') : t.id === 'more' ? (moreView === 'settings' ? 'settings' : 'kit') : t.id;
+  try { history.replaceState(null, '', '#' + h); } catch(e){}
 }
+$('bseg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(b.dataset.v); });
+$('mseg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(b.dataset.v); });
 const GOHASH = location.hash;   // a shared link starts with #go=
 go((location.hash || '').slice(1));
 
