@@ -336,6 +336,25 @@ nav#nav button[aria-current=page]::after{display:none}
 #out:empty,#week:empty{min-height:0;background:none}
 #out:empty::before,#week:empty::before{padding:10px 12px 0}
 
+/* ===== v0.48 Show / Hide: an obvious button wherever detail can wait ===== */
+.reveal{margin:12px 0 0}
+.reveal>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;min-height:46px;padding:0 16px;border-radius:14px;border:1.5px solid color-mix(in srgb,var(--teal) 45%,transparent);background:color-mix(in srgb,var(--teal) 9%,transparent);color:var(--teal);font-size:.92rem;font-weight:700;user-select:none;-webkit-tap-highlight-color:transparent;justify-content:center}
+.reveal>summary::-webkit-details-marker{display:none}
+.reveal>summary::after,.verdict .explain summary::after{content:'';flex:none;width:8px;height:8px;border-right:2.5px solid currentColor;border-bottom:2.5px solid currentColor;transform:translateY(-2px) rotate(45deg);transition:transform .2s;color:inherit}
+.reveal[open]>summary::after,.verdict .explain[open] summary::after{transform:translateY(2px) rotate(-135deg)}
+.reveal>summary:active{transform:scale(.98)}
+.rv-hide{display:none}.reveal[open] .rv-hide{display:inline}.reveal[open] .rv-show{display:none}
+.rv-body{padding:12px 2px 2px}
+.rv-body .ln{display:block;margin:2px 0;font-size:.92rem}
+.rv-body p{margin:6px 0 0;font-size:.9rem;color:var(--mute)}
+.spotw .reveal{margin:-2px 0 10px}.spotw .reveal>summary{min-height:40px;font-size:.85rem}
+.verdict .explain{border-top:0;margin-top:14px}
+.verdict .explain summary{list-style:none;display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 16px;border-radius:14px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);font-size:.92rem;font-weight:700;cursor:pointer}
+.verdict .explain summary::-webkit-details-marker{display:none}
+.verdict .explain[open] summary{margin-bottom:6px}
+details.feat>summary{min-height:48px}
+details.feat>summary::after{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:color-mix(in srgb,var(--teal) 13%,transparent);color:var(--teal);font-size:1.25rem;font-weight:700;line-height:1}
+
 </style>
 </head>
 <body data-tab="today">
@@ -656,7 +675,10 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.47 · 22 Oct 2026';   // bump this each time the file changes
+const revealOpen = new Set();   // which Show / Hide panels are open, so a redraw doesn't fold them shut again
+const reveal = (id, label, html) => `<details class="reveal" data-rv="${id}"${revealOpen.has(id) ? ' open' : ''}><summary><span class="rv-show">Show ${label}</span><span class="rv-hide">Hide ${label}</span></summary><div class="rv-body">${html}</div></details>`;
+document.addEventListener('toggle', e => { const d = e.target; if (d && d.dataset && d.dataset.rv){ if (d.open) revealOpen.add(d.dataset.rv); else revealOpen.delete(d.dataset.rv); } }, true);
+const VERSION = '0.48 · 22 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -852,9 +874,8 @@ function weekHTML(){
   return `<section class="card"><h3>Pick a day (level ${level}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()})</h3>
     <div class="daychips" role="group" aria-label="Day">${chips}</div>
     <ul class="days">${lis[sel]}</ul>
-    <p class="legend">Best two-hour daylight window, scored for your level at the forecast point on Today. Forecasts get less certain the further ahead they look.</p></section>`
-    + (data.days[sel].rows.some(x => x.h != null) ? `<section class="card"><h3>Hour by hour, ${data.days[sel].date ? dayName(data.days[sel].date, true) : 'this day'}</h3>${dayCharts(data.days[sel], res[sel])}
-    <p class="legend">Green band = best window for your level. Grey = night. Dashed line = now. The dot marks the highest point. Tide heights and times are model estimates, so check a tide table.</p></section>` : '');
+    ${reveal('wk-about', 'how this is scored', '<p class="legend">Best two-hour daylight window, scored for your level at the forecast point on Today. Forecasts get less certain the further ahead they look.</p>')}</section>`
+    + (data.days[sel].rows.some(x => x.h != null) ? `<section class="card"><h3>Hour by hour, ${data.days[sel].date ? dayName(data.days[sel].date, true) : 'this day'}</h3><p class="legend" style="margin:0">Waves, wind and tide through the day.</p>${reveal('wk-charts', 'hour-by-hour charts', dayCharts(data.days[sel], res[sel]) + '<p class="legend">Green band = best window for your level. Grey = night. Dashed line = now. The dot marks the highest point. Tide heights and times are model estimates, so check a tide table.</p>')}</section>` : '');
 }
 function drawWeek(){
   $('week').innerHTML = weekHTML();
@@ -949,7 +970,7 @@ function render(){
     <div class="st"><dt>Wind</dt><dd>${fmtW(ref.windMph)}, ${s0.type}</dd></div>
     <div class="st"><dt>Water</dt><dd>${sst!=null ? fmtT(sst)+': wear '+Engine.wetsuit(sst) : 'not available'}</dd></div>
     <div class="st"><dt>Tide</dt><dd>${tideTxt()}</dd></div>
-    <div class="st"><dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></div></dl>${data.tides && data.tides.length ? '<p class="legend">Tides are model estimates from hourly data, so times can be an hour or so out, and heights are against mean sea level. Check a local tide table.</p>' : ''}</section>`;
+    <div class="st"><dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></div></dl>${data.tides && data.tides.length ? reveal('tide-note', 'tide note', '<p class="legend">Tides are model estimates from hourly data, so times can be an hour or so out, and heights are against mean sea level. Check a local tide table.</p>') : ''}</section>`;
   document.body.classList.add('loaded');
   const ub = $('upd'); if (ub) ub.onclick = () => run(center.lat, center.lon, place);
   drawWeek();
@@ -1353,7 +1374,7 @@ function drawSpots(){
   const keepV = holdView && userMoved && map ? {c:map.getCenter(), z:map.getZoom()} : null;   // background fill-in: keep the view the person chose
   holdView = false; userMoved = false;
   if (map){ map.remove(); map = null; }
-  const head = ctlHTML() + reachHTML();   // travel distance is always on show
+  const head = reveal('spots-ctl', 'day and time options', ctlHTML()) + reachHTML();   // travel distance is always on show
   fillBeachSelect(); fillReportSelect(($('rq').value || '').trim().toLowerCase());
   if (!spotsData || !data){
     box.innerHTML = head + (spotsMsg || '<h3>Finding beaches nearby…</h3><p class="legend">Asking the free map servers. This can take up to 30 seconds.</p><div class="skel"></div>');
@@ -1386,12 +1407,11 @@ function drawSpots(){
     const cond = r.none ? '' : `<span class="ln">${roughFt(r.h)} waves (${Engine.bodyHeight(r.h)}) · ${Math.round(r.period)}s swell period</span>`;
     const when = r.none ? '' : `best ${hr(r.win[0].hour)} to ${hr(r.win[1].hour+1)} · `;
     const fav = isFav(s), note = fav && favs[favKey(s)].note;
-    return `<div class="spotw"><button type="button" class="fav" data-fav="${favKey(s)}" aria-pressed="${fav}" aria-label="${fav ? 'Remove from favourites' : 'Add to favourites'}">${fav ? '★' : '☆'}</button><button type="button" class="spot" data-i="${i}"><b>${found ? '' : '#'+(i+1)+' '}${esc(s.name)}</b><span class="tag ${b}">${tag}</span>${cond}
-      <span class="ln">${when}about ${s.min} min drive${s.est?' (estimate)':''} · ${dist(s.km)}</span><small>${shelter}${wind}${big}</small></button>${fav ? `<button type="button" class="link" data-note="${favKey(s)}">${note ? '✎ Edit note' : '✎ Add a note'}</button>` : ''}${note ? `<p class="legend">📝 ${esc(note)}</p>` : ''}</div>`;
+    return `<div class="spotw"><button type="button" class="fav" data-fav="${favKey(s)}" aria-pressed="${fav}" aria-label="${fav ? 'Remove from favourites' : 'Add to favourites'}">${fav ? '★' : '☆'}</button><button type="button" class="spot" data-i="${i}"><b>${found ? '' : '#'+(i+1)+' '}${esc(s.name)}</b><span class="tag ${b}">${tag}</span><span class="ln">about ${s.min} min drive${s.est?' (estimate)':''} · ${dist(s.km)}</span></button>${reveal('spot:' + favKey(s), 'details', `${cond}${r.none ? '' : `<span class="ln">Best ${hr(r.win[0].hour)} to ${hr(r.win[1].hour+1)}</span>`}<p>${shelter}${wind}${big}</p>`)}${fav ? `<button type="button" class="link" data-note="${favKey(s)}">${note ? '✎ Edit note' : '✎ Add a note'}</button>` : ''}${note ? `<p class="legend">📝 ${esc(note)}</p>` : ''}</div>`;
   }).join('');
   const more = !found && all.length > showN ? `<button type="button" class="spot" id="more">Show more beaches (${all.length-showN} more)</button>` : '';
   box.innerHTML = head + `<h3>${title}</h3><p>${intro}</p><p class="legend">${data.k===0 ? 'Today' : data.k===1 ? 'Tomorrow' : dayName(data.date, true)}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()}. Showing ${ranked.length} of ${all.length} beaches within ${reach.n} ${unitLbl[reach.unit]}. The map shows every beach in range.</p><div id="map" role="region" aria-label="Map of nearby beaches"></div>${cards}${more}
-    <p class="legend">Wave heights are rough estimates for each beach, worked out from its angle. Beach angles are estimated, so local knowledge matters. Ask a lifeguard or surf school.</p>`;
+    ${reveal('spots-note', 'how these are worked out', '<p class="legend">Wave heights are rough estimates for each beach, worked out from its angle. Beach angles are estimated, so local knowledge matters. Ask a lifeguard or surf school.</p>')}`;
   bindReach(); const mb = $('more'); if (mb) mb.onclick = () => { showN += 5; drawSpots(); };
   if (typeof L === 'undefined'){ $('map').outerHTML = '<p class="legend">Map couldn’t load (check your connection).</p>'; return; }
   map = L.map('map', {scrollWheelZoom:false, preferCanvas:true});
@@ -1796,7 +1816,7 @@ const GEAR = ['Leash','Wax or traction pad','Rash vest','Reef-safe sunscreen','F
 $('f-gear').innerHTML = `<h4>Board finder</h4><div class="fld"><label>Weight (kg)<input id="gw" type="number" inputmode="decimal"></label><label>Height (cm)<input id="gh" type="number" inputmode="decimal"></label></div><p id="gb" class="legend">Enter your weight to see a board size.</p>
 <h4>Wetsuit finder</h4><div class="fld"><label>Water temperature (°C)<input id="gt" type="number" inputmode="decimal"></label></div><p id="gs" class="legend">Enter the water temperature.</p>
 <h4>Essentials (tick what you own)</h4>${GEAR.map((t,i) => `<label class="tick"><input type="checkbox" data-g="${i}"${load('sb-gear').includes(i) ? ' checked' : ''}> ${t}</label>`).join('')}
-<h4>Brand ideas</h4><p><b>Foam boards:</b> Budget: Wavestorm, cheap and forgiving. Mid: Softech, better build. Premium: Catch Surf, more fun once you’re riding.</p><p><b>Wetsuits:</b> Budget: Olaian (Decathlon). Mid: Rip Curl, O’Neill. Premium: Patagonia.</p><p><b>Leashes and traction:</b> FCS and Dakine are reliable. <b>Wax:</b> Sex Wax or Mr Zogs.</p><p class="legend">Editorial suggestions, not sponsored. Check current prices, reviews and fit.</p>`;
+<h4>Brand ideas</h4>${reveal('gear-brands', 'brand ideas', '<p><b>Foam boards:</b> Budget: Wavestorm, cheap and forgiving. Mid: Softech, better build. Premium: Catch Surf, more fun once you’re riding.</p><p><b>Wetsuits:</b> Budget: Olaian (Decathlon). Mid: Rip Curl, O’Neill. Premium: Patagonia.</p><p><b>Leashes and traction:</b> FCS and Dakine are reliable. <b>Wax:</b> Sex Wax or Mr Zogs.</p><p class="legend">Editorial suggestions, not sponsored. Check current prices, reviews and fit.</p>')}`;
 function gearCalc(){
   const w = +$('gw').value, h = +$('gh').value, tIn = $('gt').value === '' ? null : +$('gt').value, t = tIn == null ? null : UNITS.temp === 'F' ? (tIn - 32) * 5 / 9 : tIn;   // the wetsuit table below works in °C
   const F = [[1.1,1.3],[.95,1.1],[.8,.95],[.65,.8],[.55,.65]][level-1], X = [[55,75],[55,75],[35,55],[15,35],[0,20]][level-1];
@@ -1861,7 +1881,7 @@ function drawLog(){
   const WL = {light:`light wind (under ${fmtW(w1)})`, moderate:`moderate wind (${fmtW(w1)} to ${fmtW(w2)})`, strong:`strong wind (over ${fmtW(w2)})`};
   $('f-log').innerHTML = `<div class="fld"><label>Date<input id="ld" type="date" value="${todayStr()}"></label><label>Where<input id="lp" type="text" value="${esc(place || '')}"></label><label>Minutes in the water<input id="lm" type="number" inputmode="numeric" value="60"></label><label>What I worked on<input id="lw" type="text" placeholder="e.g. pop-up, paddling"></label><label>Rating<select id="lr">${[5,4,3,2,1].map(i => `<option value="${i}">${i} of 5</option>`).join('')}</select></label><label>Notes<textarea id="ln" rows="2"></textarea></label></div>
   <p><button type="button" id="lfill">Fill conditions for this date</button> <button type="button" class="go" id="lsave" style="width:auto;padding:0 16px">Save session</button></p><p class="legend" id="lc">${logCond ? 'Conditions: ' + logCond.txt : 'Conditions are optional.'}</p>`
-  + (n ? `<h4>Insights</h4><p>${n} session${n > 1 ? 's' : ''}, ${(mins / 60).toFixed(1)} h in the water, average rating ${(L.reduce((a,x) => a + x.rate, 0) / n).toFixed(1)}.${best ? ` You rate sessions highest at ${best[0]} waves.` : ''}${bestW ? ` You rate them highest in ${WL[bestW[0]]}.` : ''}</p><h4>Your sessions</h4>` + L.map((x,i) => `<p>${x.d} · ${esc(x.p || '')} · ${'★'.repeat(x.rate)} · ${x.min} min${x.txt ? ' · ' + x.txt : ''}${x.w ? '<br>' + esc(x.w) : ''}${x.n ? '<br><small>' + esc(x.n) + '</small>' : ''} <button type="button" class="link" data-del="${i}">Delete</button></p>`).reverse().join('') : '');
+  + (n ? `<h4>Insights</h4><p>${n} session${n > 1 ? 's' : ''}, ${(mins / 60).toFixed(1)} h in the water, average rating ${(L.reduce((a,x) => a + x.rate, 0) / n).toFixed(1)}.${best ? ` You rate sessions highest at ${best[0]} waves.` : ''}${bestW ? ` You rate them highest in ${WL[bestW[0]]}.` : ''}</p>` + reveal('log-list', 'your sessions (' + n + ')', L.map((x,i) => `<p>${x.d} · ${esc(x.p || '')} · ${'★'.repeat(x.rate)} · ${x.min} min${x.txt ? ' · ' + x.txt : ''}${x.w ? '<br>' + esc(x.w) : ''}${x.n ? '<br><small>' + esc(x.n) + '</small>' : ''} <button type="button" class="link" data-del="${i}">Delete</button></p>`).reverse().join('')) : '');
 }
 $('f-log').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
