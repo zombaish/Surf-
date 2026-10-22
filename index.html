@@ -81,6 +81,20 @@ select{display:block;width:100%;font:inherit;min-height:48px;border-radius:12px;
 button.link{min-height:0;border:0;background:none;color:var(--teal);text-decoration:underline;padding:4px 2px;font-weight:600}
 .cond{margin:12px 0 0;font-size:.85rem;color:var(--ink)}
 #inst [hidden]{display:none!important}
+nav#nav button{font-size:.66rem;padding:0 1px}   /* seven tabs share the bar (nav# makes it win over the base rule further down) */
+.rp-head{display:flex;gap:12px;align-items:stretch;margin:4px 0 14px}.rp-bar{display:block;width:6px;border-radius:3px;flex:none}
+.rp h2{margin:0;font-size:1.3rem;line-height:1.2}.rp .sub{margin:2px 0 0;color:var(--mute);font-size:.9rem;font-weight:600}
+.rp-h{margin:6px 0 2px;font-size:1.15rem}
+.rp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.rp-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;min-height:158px;display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.rp-card.full{grid-column:1/-1;min-height:0;gap:12px}
+.rp-k{font-size:.72rem;font-weight:700;letter-spacing:.07em;color:var(--mute);text-transform:uppercase}
+.rp-big{font-size:2rem;font-weight:800;line-height:1.1;letter-spacing:-.02em;margin-top:10px}.rp-big small{font-size:1.1rem;font-weight:700;letter-spacing:0}
+.rp-dir{font-size:1.1rem;font-weight:800}
+.rp-sub{font-size:.95rem;font-weight:600;margin-top:4px}
+.rp-src{font-size:.72rem;color:var(--mute);margin-top:12px}
+.rp-rate{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.rp-rate b{font-size:1.5rem;letter-spacing:.01em}
+.rp-segs{display:flex;gap:6px}.rp-segs i{display:block;width:34px;height:8px;border-radius:4px;background:var(--line)}.rp-segs i.on{background:var(--c)}
 .ch{margin:12px 0 0}.ch h4{margin:0 0 2px;font-size:.9rem}.ch svg{width:100%;height:auto;display:block}
 .ch text{fill:var(--mute);font-size:10px;font-family:inherit}.ch .gr{stroke:var(--line);stroke-width:1}.ch .nw{stroke:var(--mute);stroke-width:1.5;stroke-dasharray:3 3}
 .ch .ln{fill:none;stroke:var(--teal);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}.ch .pk{fill:var(--teal);stroke:var(--card);stroke-width:2}
@@ -261,6 +275,7 @@ body.fs-lock{overflow:hidden}
 </div>
 
 <div class="tab" id="t-today"><div id="out" aria-live="polite"></div><p class="note">Forecasts are estimates. Always check with local lifeguards and signage.</p></div>
+<div class="tab" id="t-report" hidden><div id="report"></div></div>
 <div class="tab" id="t-week" hidden><div id="week"></div></div>
 <div class="tab" id="t-beaches" hidden><input id="sq" type="search" placeholder="Search beaches nearby, e.g. Fistral" aria-label="Search beaches nearby" autocomplete="off"><select id="bsel" aria-label="Pick any beach nearby" hidden></select><section class="card" id="spots" hidden></section><p class="empty">Search for a beach or town above to see nearby beaches.</p></div>
 <div class="tab" id="t-skills" hidden>
@@ -352,7 +367,7 @@ const CONFIG = {
   drivePenaltyPerMin: 0.25,    // spot ranking: each drive minute costs this many score points
   progress: {levelUpAt: 2},    // self-assessment every skill needs before a level-up: 0 not yet, 1 sometimes, 2 consistent
   exposure: {fullWithin: 45, shelteredFrom: 110, minShare: 0.15},  // swell angle vs beach facing
-  spots: {probeKm: 1.2, max: 48},
+  spots: {probeKm: 1.2, max: 100},   // beaches checked and shown straight away
   times: {any:['Any time',0,24], morning:['Morning',0,11], midday:['Midday',11,15], afternoon:['Afternoon',15,24]}  // time-of-day choices: label, from hour, to hour  // beach search: how far from each beach we look for sea to work out its angle, most beaches kept (the travel distance is set by the user)
 };
 const Engine = {
@@ -495,7 +510,7 @@ const get = async u => { const r = await fetch(u); if(!r.ok) throw new Error('HT
 const dayName = (date, long) => new Date(date + 'T12:00:00Z').toLocaleDateString(undefined, long ? {weekday:'short', day:'numeric', month:'short', timeZone:'UTC'} : {weekday:'short', day:'numeric', timeZone:'UTC'});
 async function loadForecast(lat, lon){
   const m = get(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=wave_height,wave_period,wave_direction,sea_surface_temperature,sea_level_height_msl&cell_selection=sea&timezone=auto&forecast_days=7`).catch(() => null);   // null = no wave data at this point
-  const w = get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=wind_speed_10m,wind_direction_10m&daily=sunrise,sunset&wind_speed_unit=mph&timezone=auto&forecast_days=7`);
+  const w = get(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&daily=sunrise,sunset&wind_speed_unit=mph&timezone=auto&forecast_days=7`);
   const [marine, wx] = await Promise.all([m, w]);
   if (!marine || !marine.hourly) return null;
   const off = wx.utc_offset_seconds || 0;
@@ -507,7 +522,7 @@ async function loadForecast(lat, lon){
       const j = wx.hourly.time.indexOf(t);
       rows.push({t, hour:+t.slice(11,13), h:marine.hourly.wave_height[i], period:marine.hourly.wave_period[i],
         waveFrom:marine.hourly.wave_direction[i], sst:marine.hourly.sea_surface_temperature[i], tide:marine.hourly.sea_level_height_msl ? marine.hourly.sea_level_height_msl[i] : null,
-        windMph:wx.hourly.wind_speed_10m[j], windFrom:wx.hourly.wind_direction_10m[j],
+        windMph:wx.hourly.wind_speed_10m[j], windFrom:wx.hourly.wind_direction_10m[j], gust:wx.hourly.wind_gusts_10m ? wx.hourly.wind_gusts_10m[j] : null,
         daylight: t >= rise.slice(0,13)+':00' && t <= set, past: t.slice(0,13) < now.slice(0,13)});
     });
     return {rows, rise, set, date, label: k===0 ? 'today' : k===1 ? 'tomorrow' : 'on ' + dayName(date, true)};
@@ -522,7 +537,7 @@ async function loadForecast(lat, lon){
 
 /* ========= UI ========= */
 const $ = id => document.getElementById(id);
-const VERSION = '0.35 · 22 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.38 · 22 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -560,6 +575,52 @@ document.addEventListener('keydown', e => {
 
 const trustTxt = {high:'', medium:'Fairly reliable', low:'Less certain, check again closer to the day'};
 let wk = null, weekK = null;   // weekK: the day shown on the Week tab   // this week's per-day results, reused when the better/avoid advice is filled in
+/* ===== Report tab: a "right now" page for the forecast place (chunk 1: rating, surf, wind) ===== */
+const RATING = [['VERY POOR', 0], ['POOR', 20], ['FAIR', CONFIG.okAt], ['GOOD', CONFIG.goodAt], ['GREAT', 80]];   // 5 steps from the 0-100 score
+const compass16 = d => ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round((((d % 360) + 360) % 360) / 22.5) % 16];
+const clock = off => { const d = new Date(Date.now() + (off || 0) * 1000), h = d.getUTCHours(); return (h % 12 || 12) + ':' + String(d.getUTCMinutes()).padStart(2, '0') + (h < 12 ? 'am' : 'pm'); };
+function surfRange(h){   // a wave height as a range, like "1-2" ft
+  if (UNITS.len === 'm') return {n:(h * 0.8).toFixed(1) + '-' + (h * 1.2).toFixed(1), u:'m'};
+  const f = h / 0.3048; if (f < 1) return {n:'0-1', u:'ft'};
+  const lo = f < 4 ? Math.floor(f) : Math.floor(f / 2) * 2; return {n:lo + '-' + (lo + (f < 4 ? 1 : 2)), u:'ft'};
+}
+function bodyRange(h){   // "Shin to knee", "Waist-high"
+  const w = x => x < 0.15 ? 'ankle' : x < 0.3 ? 'shin' : x < 0.45 ? 'knee' : x < 0.65 ? 'thigh' : x < 0.85 ? 'waist' : x < 1.05 ? 'chest' : x < 1.3 ? 'shoulder' : x < 1.6 ? 'head' : x < 2.2 ? 'overhead' : 'well overhead';
+  const a = w(h * 0.8), b = w(h * 1.2), cap = x => x[0].toUpperCase() + x.slice(1);
+  return a === b ? cap(a) + (/overhead/.test(a) ? '' : '-high') : cap(a) + ' to ' + b;
+}
+function reportHTML(){
+  const none = t => `<section class="card"><h3>Surf report</h3><p class="legend">${t}</p></section>`;
+  if (!data) return none('No forecast loaded yet. Search for a place above, or use your location.');
+  const day = data.days[0], cur = day.rows.find(r => !r.past) || day.rows[day.rows.length - 1];
+  if (!cur || cur.h == null) return none('There is no wave data for this point right now.');
+  const sc = Engine.score({...cur, daylight:true}, level), t = sc ? sc.total : 0;
+  const step = RATING.reduce((a, [, min], i) => t >= min ? i : a, 0), col = {g:'var(--good)', o:'var(--ok)', r:'var(--bad)'}[Engine.band(t)];
+  const sr = surfRange(cur.h), [wn, wu] = fmtW(cur.windMph).split(' ');
+  const wt = Engine.windType(cur.windFrom, cur.waveFrom ?? cur.windFrom + 180), wtx = {offshore:'Offshore', onshore:'Onshore', cross:'Cross-shore'}[wt];
+  const gust = cur.gust != null && cur.gust > cur.windMph + 1 ? fmtW(cur.gust).replace(' ', '') + ' gusts, ' : '';
+  return `<div class="rp">
+  <div class="rp-head"><i class="rp-bar" style="background:${col}"></i><div><h2>${esc(place || 'Your spot')} surf report</h2><p class="sub">Report &amp; forecast</p></div></div>
+  <h3 class="rp-h">Current surf conditions</h3>
+  <p class="sub">Local time: ${clock(data.off)}</p>
+  <div class="rp-grid">
+    <section class="rp-card full"><div class="rp-k">Surf rating</div>
+      <div class="rp-rate"><b style="color:${col}">${RATING[step][0]}</b><span class="rp-segs" aria-hidden="true">${RATING.map((_, i) => `<i class="${i <= step ? 'on' : ''}" style="--c:${col}"></i>`).join('')}</span></div>
+      <div class="rp-src">Shorebreak score for level ${level}${cur.daylight ? '' : '. It is dark now, so this is how the waves look, not a time to surf'}</div></section>
+    <section class="rp-card"><div class="rp-k">Surf</div>
+      <div><div class="rp-big">${sr.n}<small>${sr.u}</small></div><div class="rp-sub">${bodyRange(cur.h)}</div></div>
+      <div class="rp-src">Wave model</div></section>
+    <section class="rp-card"><div class="rp-k">Wind</div>
+      <div><div class="rp-big">${wn}<small>${wu}</small> <span class="rp-dir">${cur.windFrom != null ? compass16(cur.windFrom) : ''}</span></div><div class="rp-sub">${gust}${wtx}</div></div>
+      <div class="rp-src">Weather model</div></section>
+  </div>
+  <p class="legend">These are the conditions at the forecast point for ${esc(place || 'this place')}, not a particular beach. Offshore and onshore are judged against the swell direction here.</p></div>`;
+}
+function drawReport(){
+  const el = $('report'); if (!el) return;
+  try { el.innerHTML = reportHTML(); } catch(e){ el.innerHTML = '<section class="card"><p class="legend">The report could not be drawn. Try searching again.</p></section>'; }
+}
+
 /* One hourly line chart as inline SVG (no library). rows: a day's hourly rows. fmt shows a value in the person's units.
    o: {title, zero: start the axis at 0, span: smallest axis range, best: [first, last] hour index of the best window} */
 function lineChart(rows, key, fmt, o){
@@ -723,6 +784,7 @@ function render(){
     <dt>Daylight</dt><dd>${t(data.rise)} to ${t(data.set)}</dd></dl>${data.tides && data.tides.length ? '<p class="legend">Tides are model estimates from hourly data, so times can be an hour or so out, and heights are against mean sea level. Check a local tide table.</p>' : ''}</section>`;
   const ub = $('upd'); if (ub) ub.onclick = () => run(center.lat, center.lon, place);
   drawWeek();
+  drawReport();
   drawSpots();
 }
 
@@ -857,7 +919,7 @@ function showSaved(c){   // show the saved forecast for a place, with a banner s
 async function run(lat, lon, name){
   const id = ++runId; spotRun++; showN = 5;
   triedQ.clear(); enrichRun++; place = name; center = {lat, lon}; data = null; dayK = null; weekK = null; $('sq').value = ''; spotsData = null; spotsMsg = ''; fcFrom = null; savedAt = null;
-  $('out').innerHTML = '<div class="skel" aria-label="Loading"></div>';
+  $('out').innerHTML = '<div class="skel" aria-label="Loading"></div>'; if ($('report')) $('report').innerHTML = '<div class="skel" aria-label="Loading"></div>';
   $('spots').hidden = false; drawSpots();
   const fcP = loadForecast(lat, lon).then(d => ({d}), e => ({e}));
   const spP = Promise.race([findSpots(lat, lon), new Promise((_, rej) => setTimeout(() => rej(new Error('timed out')), 35000))]).then(l => ({l}), e => ({e}));
@@ -937,9 +999,11 @@ async function probeFacing(todo, D){
   todo.forEach(s => { for (let k=0; k<N; k++){ const t = k*360/N*R_;
     pts.push([s.lat + D/111.2*Math.cos(t), s.lon + D/(111.2*Math.cos(s.lat*R_))*Math.sin(t)]); } });
   const chunks = []; for (let i=0; i<pts.length; i+=96) chunks.push(pts.slice(i, i+96));   // up to 100 points per request
-  const parts = await Promise.all(chunks.map(c => getT(`https://api.open-meteo.com/v1/elevation?latitude=${c.map(p=>p[0].toFixed(5)).join(',')}&longitude=${c.map(p=>p[1].toFixed(5)).join(',')}`, 10000)));
-  const el = parts.flatMap(d => d.elevation);
+  const parts = await Promise.all(chunks.map(c => getT(`https://api.open-meteo.com/v1/elevation?latitude=${c.map(p=>p[0].toFixed(5)).join(',')}&longitude=${c.map(p=>p[1].toFixed(5)).join(',')}`, 10000).catch(() => null)));
+  if (parts.every(d => !d)) throw new Error('the height service did not answer');
+  const el = parts.flatMap((d, ci) => d && d.elevation ? d.elevation : new Array(chunks[ci].length).fill(undefined));   // a failed request leaves undefined for its beaches only
   return todo.map((s,i) => {
+    if (el.slice(i*N, i*N+N).some(v => v === undefined)) return undefined;   // not answered: not remembered, tried again next time
     let x = 0, y = 0, n = 0;
     for (let k=0; k<N; k++){ const v = el[i*N+k];
       if (v == null || v <= 0){ const t = k*360/N*R_; x += Math.sin(t); y += Math.cos(t); n++; } }
@@ -952,31 +1016,39 @@ async function addFacing(list){
   if (todo.length){
     const res = await probeFacing(todo, CONFIG.spots.probeKm);
     const again = todo.filter((s,i) => res[i] === 'x');
-    if (again.length){ try { const r2 = await probeFacing(again, CONFIG.spots.probeKm*3); again.forEach((s,j) => { res[todo.indexOf(s)] = r2[j]; }); } catch(e){} }
-    todo.forEach((s,i) => { fc[key(s)] = res[i]; });
+    if (again.length){ try { const r2 = await probeFacing(again, CONFIG.spots.probeKm*3); again.forEach((s,j) => { if (r2[j] !== undefined) res[todo.indexOf(s)] = r2[j]; }); } catch(e){} }
+    todo.forEach((s,i) => { if (res[i] !== undefined) fc[key(s)] = res[i]; });
     try { localStorage.setItem('sb-face2', JSON.stringify(fc)); } catch(e){}
   }
-  return list.filter(s => { const v = fc[key(s)]; if (v === 'x') return false; s.facing = v; return true; });
+  let partial = false;
+  const out = list.filter(s => { const v = fc[key(s)]; if (v === 'x') return false; if (v === undefined) partial = true; s.facing = v === undefined ? null : v; return true; });
+  out.partial = partial;   // some beaches got no answer this time, so do not save this list for later
+  return out;
 }
 
 async function findSpots(lat, lon){
-  const rk = Math.round(reachKm()), ck = 'sb-spots6:' + lat.toFixed(2) + ',' + lon.toFixed(2) + ',' + rk;
+  const rk = Math.round(reachKm()), ck = 'sb-spots7:' + lat.toFixed(2) + ',' + lon.toFixed(2) + ',' + rk;
   try { const c = JSON.parse(localStorage.getItem(ck) || 'null'); if (c && Date.now() - c.t < 864e5){ c.list.rest = c.rest || []; return c.list; } } catch(e){}
   let list = await beachesNear(lat, lon, rk); const rest = list.rest || [];
-  try { list = await addFacing(list); } catch(e){ list.forEach(s => s.facing = null); }   // service down: rank without angles
+  let partial = false;
+  try { list = await addFacing(list); partial = !!list.partial; } catch(e){ list.forEach(s => s.facing = null); partial = true; }   // service down: rank without angles
   list.rest = rest;
-  if (list.length && list.every(s => s.facing != null)) try { localStorage.setItem(ck, JSON.stringify({t:Date.now(), list, rest})); } catch(e){}
+  if (list.length && !partial) try {   // an unclear angle is fine to remember; a failed lookup is not
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('sb-spots') && k !== ck){ let t = 0; try { t = JSON.parse(localStorage.getItem(k)).t; } catch(e){} if (k.startsWith('sb-spots6') || !(Date.now() - t < 864e5)) localStorage.removeItem(k); } });   // old and stale lists
+    localStorage.setItem(ck, JSON.stringify({t:Date.now(), list, rest}));
+  } catch(e){}
   return list;
 }
 
 async function addDrive(lat, lon, list){   // real road times from OSRM; falls back to a rough estimate
   list.forEach(s => s.km = hav(lat, lon, s.lat, s.lon));
   list.sort((a,b) => a.km - b.km);
-  try {
-    const co = [lon+','+lat, ...list.map(s => s.lon+','+s.lat)].join(';');
+  const groups = []; for (let i = 0; i < list.length; i += 49) groups.push(list.slice(i, i + 49));   // the free routing server refuses tables of 100+ points
+  await Promise.all(groups.map(async g => { try {
+    const co = [lon+','+lat, ...g.map(s => s.lon+','+s.lat)].join(';');
     const d = await getT(`https://router.project-osrm.org/table/v1/driving/${co}?sources=0&annotations=duration`, 5000);
-    list.forEach((s,i) => { const v = d.durations[0][i+1]; if (v != null) s.min = Math.round(v/60); });
-  } catch(e){}
+    g.forEach((s,i) => { const v = d.durations[0][i+1]; if (v != null) s.min = Math.round(v/60); });
+  } catch(e){} }));
   list.forEach(s => { if (!(s.min >= 0)){ s.min = Math.round(s.km*1.4/50*60); s.est = true; } });
   (list.rest || []).forEach(s => { s.km = hav(lat, lon, s.lat, s.lon); s.min = Math.round(s.km*1.4/50*60); s.est = true; });   // beaches not yet checked: rough drive time
 }
@@ -1184,7 +1256,7 @@ $('spots').addEventListener('click', e => {   // star a beach, or add a note to 
   }
 });
 const KNOWN = [{name:'Gwithian Beach', lat:50.2285, lon:-5.392, key:'gwithian'}];   // popular beaches the free map data sometimes leaves out
-const MAXB = 100;
+const MAXB = 150;   // most beaches shown in all (the rest past the first 100 are added quietly)
 function addKnown(list){
   list.rest = list.rest || [];
   KNOWN.forEach(k => {
@@ -1463,7 +1535,7 @@ $('prog').addEventListener('toggle', e => { const d = e.target; if (d.dataset &&
 /* ===== Tabs: to add a feature, add one line to TABS and one <div class="tab" id="t-NAME" hidden> panel ===== */
 const ic = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 const TABS = [
-  {id:'today', label:'Today', icon:ic('<circle cx="12" cy="6.5" r="2.5"/><path d="M2 13c2.5 0 2.5-2.5 5-2.5S9.5 13 12 13s2.5-2.5 5-2.5S19.5 13 22 13M2 18.5c2.5 0 2.5-2.5 5-2.5s2.5 2.5 5 2.5 2.5-2.5 5-2.5 2.5 2.5 5 2.5"/>'), strip:true}, {id:'week', label:'Week', icon:ic('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'), strip:true},
+  {id:'today', label:'Today', icon:ic('<circle cx="12" cy="6.5" r="2.5"/><path d="M2 13c2.5 0 2.5-2.5 5-2.5S9.5 13 12 13s2.5-2.5 5-2.5S19.5 13 22 13M2 18.5c2.5 0 2.5-2.5 5-2.5s2.5 2.5 5 2.5 2.5-2.5 5-2.5 2.5 2.5 5 2.5"/>'), strip:true}, {id:'report', label:'Report', icon:ic('<path d="M4 20V11M10 20V5M16 20v-8M22 20H2"/>'), strip:true}, {id:'week', label:'Week', icon:ic('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'), strip:true},
   {id:'beaches', label:'Beaches', icon:ic('<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'), strip:true}, {id:'skills', label:'Skills', icon:ic('<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>')}, {id:'kit', label:'Kit & log', icon:ic('<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M9 8V6a3 3 0 0 1 6 0v2M4 13h16"/>')}, {id:'more', label:'More', icon:ic('<circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/>')}];
 $('nav').innerHTML = TABS.map(t => `<button type="button" data-t="${t.id}"><span aria-hidden="true">${t.icon}</span>${t.label}</button>`).join('');
 $('nav').addEventListener('click', e => { const b = e.target.closest('button'); if (b) go(b.dataset.t); });
@@ -1473,6 +1545,7 @@ function go(id){
   $('strip').hidden = !t.strip;
   $('nav').querySelectorAll('button').forEach(b => b.setAttribute('aria-current', b.dataset.t === t.id ? 'page' : 'false'));
   if (t.id === 'beaches' && data && spotsData) drawSpots();   // the map needs a visible box to size itself
+  if (t.id === 'report') drawReport();
   if (t.id === 'skills') drawChecks();
   if (t.id === 'kit' && $('gt')) gearOpen();   // the panel is built a little further down on first load
   window.scrollTo(0, 0);
