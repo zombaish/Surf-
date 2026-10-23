@@ -430,6 +430,8 @@ html[data-theme=dusk]{--pat:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.
 .card:nth-child(even),section.card:nth-child(even){background-position:left -140px bottom -140px,0 0,0 0,0 0}
 form.row{background:var(--pat) right -150px center/300px 300px no-repeat,var(--grain),radial-gradient(130% 80% at 0% 0%,var(--hi),transparent 62%),linear-gradient(160deg,var(--card),color-mix(in srgb,var(--card) 95%,var(--teal)))}
 body:not([data-tab=today]) .hero{background:var(--pat-on) right -130px center/280px 280px no-repeat,linear-gradient(100deg,var(--sk0),var(--sk1))}
+/* ===== v0.54 long lists: the browser skips cards that are off screen ===== */
+.spotw{content-visibility:auto;contain-intrinsic-size:auto 130px}
 </style>
 </head>
 <body data-tab="today">
@@ -754,7 +756,7 @@ const $ = id => document.getElementById(id);
 const revealOpen = new Set();   // which Show / Hide panels are open, so a redraw doesn't fold them shut again
 const reveal = (id, label, html) => `<details class="reveal" data-rv="${id}"${revealOpen.has(id) ? ' open' : ''}><summary><span class="rv-show">Show ${label}</span><span class="rv-hide">Hide ${label}</span></summary><div class="rv-body">${html}</div></details>`;
 document.addEventListener('toggle', e => { const d = e.target; if (d && d.dataset && d.dataset.rv){ if (d.open) revealOpen.add(d.dataset.rv); else revealOpen.delete(d.dataset.rv); } }, true);
-const VERSION = '0.53 · 22 Oct 2026';   // bump this each time the file changes
+const VERSION = '0.54 · 23 Oct 2026';   // bump this each time the file changes
 $('ver').textContent = 'v' + VERSION;
 let level = 1, place = null, data = null, dayK = null;   // dayK: the day picked by the user (null = the default day)
 try { level = +localStorage.getItem('sb-level') || 1; } catch(e){}
@@ -1185,7 +1187,7 @@ function showSaved(c){   // show the saved forecast for a place, with a banner s
 }
 
 async function run(lat, lon, name){
-  const id = ++runId; spotRun++; showN = 5;
+  const id = ++runId; spotRun++; showN = PAGE;
   triedQ.clear(); enrichRun++; place = name; center = {lat, lon}; data = null; dayK = null; weekK = null; $('sq').value = ''; spotsData = null; spotsMsg = ''; fcFrom = null; savedAt = null; reportSpot = null; $('rq').value = ''; reportHint(''); fillReportSelect();
   $('out').innerHTML = '<div class="skel" aria-label="Loading"></div>'; if ($('report')) $('report').innerHTML = '<div class="skel" aria-label="Loading"></div>';
   $('spots').hidden = false; drawSpots();
@@ -1381,7 +1383,8 @@ function ctlHTML(){
 }
 
 /* ===== How far are you willing to travel? (miles, km or minutes of driving) ===== */
-let reach = {n:25, unit:'mi'}, showN = 5, spotRun = 0;
+const PAGE = 100;   // beaches listed at a time
+let reach = {n:25, unit:'mi'}, showN = PAGE, spotRun = 0;
 try { const r = JSON.parse(localStorage.getItem('sb-reach') || 'null'); if (r && r.n > 0 && ['mi','km','min'].includes(r.unit)) reach = r; } catch(e){}
 const unitLbl = {mi:'miles', km:'km', min:'minutes drive'};
 const reachKm = () => Math.min(120, Math.max(2, reach.unit === 'mi' ? reach.n*1.609 : reach.n));   // search radius; for minutes it's a generous straight-line guess, then real drive times filter
@@ -1400,7 +1403,7 @@ function bindReach(){
 }
 async function reloadSpots(){
   if (!center) return;
-  const id = runId, sid = ++spotRun; showN = 5; spotsData = null; spotsMsg = ''; triedQ.clear(); enrichRun++; drawSpots();
+  const id = runId, sid = ++spotRun; showN = PAGE; spotsData = null; spotsMsg = ''; triedQ.clear(); enrichRun++; drawSpots();
   try {
     const l = await Promise.race([findSpots(center.lat, center.lon), new Promise((_, rej) => setTimeout(() => rej(new Error('timed out')), 60000))]);
     await addDrive(center.lat, center.lon, l);
@@ -1501,10 +1504,10 @@ function drawSpots(){
     const fav = isFav(s), note = fav && favs[favKey(s)].note;
     return `<div class="spotw"><button type="button" class="fav" data-fav="${favKey(s)}" aria-pressed="${fav}" aria-label="${fav ? 'Remove from favourites' : 'Add to favourites'}">${fav ? '★' : '☆'}</button><button type="button" class="spot" data-i="${i}"><b>${found ? '' : '#'+(i+1)+' '}${esc(s.name)}</b><span class="tag ${b}">${tag}</span><span class="ln">about ${s.min} min drive${s.est?' (estimate)':''} · ${dist(s.km)}</span></button>${reveal('spot:' + favKey(s), 'details', `${cond}${r.none ? '' : `<span class="ln">Best ${hr(r.win[0].hour)} to ${hr(r.win[1].hour+1)}</span>`}<p>${shelter}${wind}${big}</p>`)}${fav ? `<button type="button" class="link" data-note="${favKey(s)}">${note ? '✎ Edit note' : '✎ Add a note'}</button>` : ''}${note ? `<p class="legend">📝 ${esc(note)}</p>` : ''}</div>`;
   }).join('');
-  const more = !found && all.length > showN ? `<button type="button" class="spot" id="more">Show more beaches (${all.length-showN} more)</button>` : '';
-  box.innerHTML = head + `<h3>${title}</h3><p>${intro}</p><p class="legend">${data.k===0 ? 'Today' : data.k===1 ? 'Tomorrow' : dayName(data.date, true)}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()}. Showing ${ranked.length} of ${all.length} beaches within ${reach.n} ${unitLbl[reach.unit]}. The map shows every beach in range.</p><div id="map" role="region" aria-label="Map of nearby beaches"></div>${cards}${more}
+  const more = !found && all.length > showN ? `<button type="button" class="spot" id="more">Show the next ${Math.min(PAGE, all.length-showN)} beaches (${all.length-showN} left)</button>` : '';
+  box.innerHTML = head + `<h3>${title}</h3><p>${intro}</p><p class="legend">${data.k===0 ? 'Today' : data.k===1 ? 'Tomorrow' : dayName(data.date, true)}${when==='any' ? '' : ', '+CONFIG.times[when][0].toLowerCase()}. Showing ${ranked.length} of ${all.length} beaches within ${reach.n} ${unitLbl[reach.unit]}. The map shows every beach in range, thinned out a little when zoomed out.</p><div id="map" role="region" aria-label="Map of nearby beaches"></div>${cards}${more}
     ${reveal('spots-note', 'how these are worked out', '<p class="legend">Wave heights are rough estimates for each beach, worked out from its angle. Beach angles are estimated, so local knowledge matters. Ask a lifeguard or surf school.</p>')}`;
-  bindReach(); const mb = $('more'); if (mb) mb.onclick = () => { showN += 5; drawSpots(); };
+  bindReach(); const mb = $('more'); if (mb) mb.onclick = () => { showN += PAGE; drawSpots(); };
   if (typeof L === 'undefined'){ $('map').outerHTML = '<p class="legend">Map couldn’t load (check your connection).</p>'; return; }
   map = L.map('map', {scrollWheelZoom:false, preferCanvas:true});
   addFsControl();
@@ -1513,24 +1516,36 @@ function drawSpots(){
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:18, attribution:'© OpenStreetMap contributors'}).addTo(map);
   L.circleMarker([center.lat, center.lon], {radius:7, color:'#fff', weight:2, fillColor:'#0c2a31', fillOpacity:1}).addTo(map).bindTooltip('You searched here');
   const onMap = [...ranked, ...all.filter(x => !ranked.some(y => y.s === x.s))];   // the map shows every beach, the list only the top ones
-  const COL = {g:'#17653f', o:'#7a4d00', r:'#a3201a'}, pills = L.layerGroup().addTo(map), m1 = map;
-  const markers = onMap.map(({s,r}) => L.circleMarker([s.lat, s.lon], {radius:8, color:'#fff', weight:2, fillColor:COL[Engine.band(r.total)], fillOpacity:1}).addTo(map)
-    .bindPopup(`<b>${esc(s.name)}</b><br>${r.none ? '' : roughFt(r.h)+' waves · '+Math.round(r.period)+'s swell<br>'}About ${s.min} min drive`));
+  const COL = {g:'#17653f', o:'#7a4d00', r:'#a3201a'}, pills = L.layerGroup().addTo(map), dots = L.layerGroup().addTo(map), m1 = map;
+  const markers = onMap.map(({s,r}) => L.circleMarker([s.lat, s.lon], {radius:8, color:'#fff', weight:2, fillColor:COL[Engine.band(r.total)], fillOpacity:1})
+    .bindPopup(() => `<b>${esc(s.name)}</b><br>${r.none ? '' : roughFt(r.h)+' waves · '+Math.round(r.period)+'s swell<br>'}About ${s.min} min drive`));   // dots are added by drawDots (only those on screen); popup text is built on tap
+  let openM = null; map.on('popupopen', e => { openM = e.popup._source; }); map.on('popupclose', () => { openM = null; });
+  const showM = i => { const m = markers[i]; if (!dots.hasLayer(m)) dots.addLayer(m); return m; };
+  const drawDots = () => {   // only beaches on screen; zoomed out, one dot per ~24 px cell (the best-ranked wins); the top 6 and any open popup always stay
+    if (m1 !== map) return;
+    const z = map.getZoom(), bb = map.getBounds().pad(0.25), cell = z >= 11 ? 0 : 33.75 / Math.pow(2, z), taken = new Set(), want = new Set();
+    onMap.forEach(({s}, i) => { if (!bb.contains([s.lat, s.lon])) return;
+      if (cell){ const k = Math.floor(s.lat / cell) + ',' + Math.floor(s.lon / cell); if (i >= 6 && taken.has(k)) return; taken.add(k); }
+      want.add(markers[i]); });
+    if (openM) want.add(openM);
+    dots.eachLayer(m => { if (!want.has(m)) dots.removeLayer(m); });
+    want.forEach(m => { if (!dots.hasLayer(m)) dots.addLayer(m); });
+  };
   const drawPills = () => {   // wave labels: top 6 always, the rest only when zoomed in, never more than 40 on screen
     if (m1 !== map) return; pills.clearLayers();
     const z = map.getZoom(), bb = map.getBounds().pad(0.05); let n = 0;
     onMap.forEach(({s,r},i) => { if (n >= 40 || !(i < 6 || z >= 11) || !bb.contains([s.lat, s.lon])) return; n++;
       const b = Engine.band(r.total);
       L.marker([s.lat, s.lon], {interactive:true, keyboard:false, zIndexOffset:1000-i, icon:L.divIcon({className:'', iconSize:[96,24], iconAnchor:[48,12],
-        html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'✕'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`})}).on('click', () => markers[i].openPopup()).addTo(pills); });   // the label sits over the dot, so tapping the label opens the same beach popup
+        html:`<div class="pin ${b}">${{g:'✓',o:'~',r:'✕'}[b]} ${r.none ? 'no window' : roughFt(r.h)+' · '+Math.round(r.period)+'s'}</div>`})}).on('click', () => showM(i).openPopup()).addTo(pills); });   // the label sits over the dot, so tapping the label opens the same beach popup
   };
-  map.on('moveend zoomend', drawPills);
+  map.on('moveend zoomend', () => { drawDots(); drawPills(); });
   const m0 = map;
   mapFit = () => { if (onMap.length) m0.fitBounds(L.latLngBounds([[center.lat, center.lon], ...onMap.map(x => [x.s.lat, x.s.lon])]).pad(0.15)); else m0.setView([center.lat, center.lon], 11); };
   const showV = () => keepV ? m0.setView(keepV.c, keepV.z, {animate:false}) : mapFit();
-  showV(); drawPills(); setTimeout(() => { if (m0 === map && !fsOn){ m0.invalidateSize(); showV(); } }, 150);   // size the map once the card has laid out
+  showV(); drawDots(); drawPills(); setTimeout(() => { if (m0 === map && !fsOn){ m0.invalidateSize(); showV(); } }, 150);   // size the map once the card has laid out
   box.querySelectorAll('.spot[data-i]').forEach(el => el.addEventListener('click', () => {
-    const m = markers[+el.dataset.i]; map.setView(m.getLatLng(), 14); m.openPopup(); $('map').scrollIntoView({block:'center'});
+    const m = showM(+el.dataset.i); map.setView(m.getLatLng(), 14); m.openPopup(); $('map').scrollIntoView({block:'center'});
   }));
 }
 
